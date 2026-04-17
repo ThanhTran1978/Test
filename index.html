@@ -177,17 +177,12 @@
           const [clients, setClients] = useState(() => {
             const saved = localStorage.getItem('smartcase_clients_data');
             if (saved) {
-                try {
-                    return JSON.parse(saved);
-                } catch(e) {
-                    console.error("Lỗi khi đọc dữ liệu đã lưu");
-                    return initialClients;
-                }
+                try { return JSON.parse(saved); } 
+                catch(e) { return initialClients; }
             }
             return initialClients;
           });
 
-          // Tự động lưu vào trình duyệt mỗi khi biến `clients` thay đổi
           useEffect(() => {
               localStorage.setItem('smartcase_clients_data', JSON.stringify(clients));
           }, [clients]);
@@ -323,25 +318,83 @@
           const handleCloseCase = () => showConfirm('Đóng ca', 'Hành động này sẽ lưu trữ hồ sơ.', () => { updateClientInState({ ...selectedClient, status: 'Đã đóng ca', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Tiến hành lượng giá cuối kỳ. Đóng ca.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã đóng ca!', 'success'); setActiveTab('clients'); });
           const handleReopenCase = () => showConfirm('Mở lại hồ sơ', 'Bạn muốn mở lại hồ sơ này?', () => { updateClientInState({ ...selectedClient, status: 'Đang can thiệp', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Hồ sơ được mở lại.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã mở lại hồ sơ!', 'success'); });
 
-          // HÀM GỌI API GEMINI (AI)
+          // ==========================================
+          // CƠ CHẾ GỌI API THÔNG MINH CHO CẢ CANVAS VÀ VERCEL
+          // ==========================================
           const runGeminiExtraction = async (textToProcess) => {
-            setIsExtractingInfo(true); setExtractError(''); 
-            const apiKey = "AQ.Ab8RN6Kwu4tv7oficjKZnHSCE5VsO4VxJAQnHx9G4EGRH0eL4A"; // <--- BẠN CẦN ĐIỀN API KEY VÀO ĐÂY KHI LÊN VERCEL
-            const prompt = `NVCTXH. Phân tích văn bản JSON. Ẩn danh. {alias, age, category, interventionLevel (chọn 1 trong 4: Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi), phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
+            setIsExtractingInfo(true); 
+            setExtractError(''); 
+            
+            // 1. BẠN PHẢI DÁN API KEY CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP NÀY ĐỂ CHẠY TRÊN VERCEL!
+            // Ví dụ: const apiKey = "AIzaSyCxxxxx...";
+            const apiKey = ""; 
+            
+            // 2. CƠ CHẾ CHUYỂN ĐỔI MODEL THÔNG MINH
+            // Trên Canvas không có API key -> dùng bản quyền preview 2.5
+            // Trên Vercel có API key cá nhân -> dùng bản quyền thương mại 1.5-flash để chống lỗi 404
+            const modelName = apiKey ? "gemini-1.5-flash" : "gemini-2.5-flash-preview-09-2025";
+            
+            const prompt = `Bạn là Nhân viên CTXH chuyên nghiệp. Hãy phân tích báo cáo sau và xuất ra ĐÚNG ĐỊNH DẠNG JSON hợp lệ. Bắt buộc phải ẩn danh tên thật thành ký tự viết tắt.
+            
+            Cấu trúc JSON yêu cầu:
+            {
+              "alias": "Tên viết tắt (VD: L.T.H)",
+              "age": "Số tuổi",
+              "category": "Nhóm đối tượng chính (VD: Bạo lực gia đình, Người già neo đơn)",
+              "interventionLevel": "BẮT BUỘC CHỌN 1 TRONG 4 (Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi)",
+              "phone": "Số điện thoại",
+              "address": "Nơi ở hiện tại",
+              "family": "Tóm tắt hoàn cảnh và người chăm sóc",
+              "history": "Lịch sử tổn thương",
+              "swot_S": "Gạch đầu dòng điểm mạnh",
+              "swot_W": "Gạch đầu dòng điểm yếu",
+              "swot_O": "Gạch đầu dòng cơ hội",
+              "swot_T": "Gạch đầu dòng thách thức"
+            }
+            
+            Văn bản cần phân tích: "${textToProcess}"`;
+            
             try {
               let response; let retries = 0; const delays = [1000, 2000, 4000];
               while (retries < 3) {
-                try { response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }) }); if (response.ok) break; } catch (e) {}
-                await new Promise(res => setTimeout(res, delays[retries])); retries++;
+                try { 
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ 
+                            contents: [{ parts: [{ text: prompt }] }], 
+                            generationConfig: { responseMimeType: "application/json" } 
+                        }) 
+                    }); 
+                    if (response.ok) break; 
+                } catch (e) {}
+                await new Promise(res => setTimeout(res, delays[retries])); 
+                retries++;
               }
-              if (!response?.ok) throw new Error('Net failed');
+              
+              if (!response?.ok) {
+                  throw new Error(`Lỗi HTTP ${response?.status}: Vui lòng kiểm tra lại tính hợp lệ của API Key.`);
+              }
+              
               const data = await response.json();
-              try { setNewClient(prev => ({ ...prev, ...JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}") })); } catch (e) { setExtractError('Lỗi định dạng JSON trả về.'); }
-            } catch (error) { setExtractError('Lỗi kết nối AI. Vui lòng kiểm tra API Key.'); } finally { setIsExtractingInfo(false); }
+              const jsonString = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+              
+              try { 
+                  const parsedData = JSON.parse(jsonString);
+                  setNewClient(prev => ({ ...prev, ...parsedData })); 
+              } catch (e) { 
+                  setExtractError('AI đã trả lời nhưng sai định dạng JSON. Bạn hãy điền thủ công.'); 
+              }
+            } catch (error) { 
+                setExtractError(`LỖI HỆ THỐNG: ${error.message || 'Không thể kết nối AI.'}`); 
+            } finally { 
+                setIsExtractingInfo(false); 
+            }
           };
-          const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung.'); return; } runGeminiExtraction(rawNotes); };
+
+          const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung báo cáo.'); return; } runGeminiExtraction(rawNotes); };
           
-          // ĐỌC FILE WORD THẬT SỰ BẰNG MAMMOTH.JS
+          // ĐỌC FILE WORD BẰNG MAMMOTH.JS
           const handleFileUpload = (e) => { 
             const file = e.target.files[0]; 
             if (!file) return; 
@@ -429,7 +482,7 @@
                 {/* NÚT XÓA TOÀN BỘ DỮ LIỆU ĐỂ DEMO */}
                 <div className="p-4 mt-auto border-t border-slate-800">
                     <button onClick={handleResetAllData} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-slate-400 hover:bg-red-900/50 hover:text-red-400 rounded-lg text-xs font-bold transition-all">
-                        <Trash2 size={14} /> Xóa toàn bộ dữ liệu (Reset Demo)
+                        <Trash2 size={14} /> Xóa dữ liệu (Reset Demo)
                     </button>
                 </div>
               </div>
@@ -517,7 +570,7 @@
                           </div>
                           <div className="relative">
                             <textarea rows={3} value={rawNotes} onChange={(e) => setRawNotes(e.target.value)} placeholder="Hoặc dán văn bản trực tiếp..." className="w-full p-3 rounded-xl border border-indigo-200 outline-none" disabled={isExtractingInfo}/>
-                            {extractError && <p className="text-red-500 text-sm mt-2">{extractError}</p>}
+                            {extractError && <p className="text-red-600 font-bold text-sm mt-2 flex items-center gap-1"><AlertTriangle size={16}/> {extractError}</p>}
                           </div>
                           <div className="mt-4 flex justify-between items-center"><button onClick={handleAutoFillNotes} disabled={isExtractingInfo || !rawNotes} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2"><Bot size={18} /> Phân tích tự động</button></div>
                         </div>
