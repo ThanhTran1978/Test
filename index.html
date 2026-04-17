@@ -5,19 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartCase VN - Quản lý Ca CTXH</title>
     
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            document.body.innerHTML = `
-                <div style="padding: 40px; font-family: monospace; line-height: 1.6; background-color: #fef2f2; color: #991b1b; height: 100vh;">
-                    <h2 style="color: #dc2626; border-bottom: 2px solid #fca5a5; padding-bottom: 10px;">⚠️ Ứng dụng gặp sự cố (Crash)</h2>
-                    <p><b>Lỗi:</b> ${message}</p>
-                    <p><b>Dòng:</b> ${lineno} - <b>Cột:</b> ${colno}</p>
-                </div>
-            `;
-            return true;
-        };
-    </script>
-
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -38,7 +25,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- Lucide Icons (Dùng bản 0.284.0 ổn định nhất) -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide-react@0.284.0/dist/umd/lucide-react.min.js"></script>
     
     <!-- Babel (Biên dịch JSX) -->
@@ -47,24 +34,26 @@
 <body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
     
     <div id="root">
-        <!-- Loader -->
+        <!-- Hiệu ứng tải trang -->
         <div class="flex flex-col items-center justify-center h-screen bg-slate-50">
             <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p class="mt-4 text-slate-500 font-medium">Đang tải ứng dụng...</p>
+            <p class="mt-4 text-slate-500 font-medium">Đang khởi tạo hệ thống...</p>
         </div>
     </div>
 
     <script type="text/babel">
+        // 1. ERROR BOUNDARY: Chống sập giao diện trắng màn hình
         class ErrorBoundary extends React.Component {
             constructor(props) { super(props); this.state = { hasError: false, errorInfo: null }; }
             static getDerivedStateFromError(error) { return { hasError: true, errorInfo: error.toString() }; }
-            componentDidCatch(error, errorInfo) { console.error("React Error:", error, errorInfo); }
+            componentDidCatch(error, errorInfo) { console.error("Lỗi React nội bộ:", error, errorInfo); }
             render() {
                 if (this.state.hasError) {
                     return (
-                        <div className="p-10 bg-red-50 text-red-800 h-screen font-mono">
-                            <h2 className="text-2xl font-bold mb-4 text-red-600">⚠️ Lỗi Giao Diện React</h2>
-                            <p className="bg-white p-4 border border-red-200 rounded shadow-sm">{this.state.errorInfo}</p>
+                        <div className="p-10 bg-red-50 text-red-800 h-screen font-mono flex flex-col items-center justify-center">
+                            <h2 className="text-3xl font-black mb-4 text-red-600">⚠️ Hệ Thống Gặp Sự Cố</h2>
+                            <p className="bg-white p-6 border border-red-200 rounded-xl shadow-lg max-w-2xl w-full">{this.state.errorInfo}</p>
+                            <button onClick={() => window.location.reload()} className="mt-6 px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow-md">Tải lại trang</button>
                         </div>
                     );
                 }
@@ -74,55 +63,63 @@
 
         const { useState, useRef, useEffect } = React;
         
-        // CƠ CHẾ SAFE ICON: Chống Crash Error 130 nếu Icon không tồn tại
-        const LR = window.lucideReact || {};
-        const safeIcon = (name) => LR[name] || ((props) => <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200" title={`Thiếu Icon: ${name}`} {...props}>!</span>);
+        // 2. CƠ CHẾ SAFE ICON BULLETPROOF (Tiệt nọc lỗi 130)
+        const L = window.lucide || {};
+        
+        // Nếu thư viện không có icon, trả về thẻ span thay vì undefined để React không bị lỗi 130
+        const FallbackIcon = (props) => <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-100 text-red-600 text-xs font-black" {...props}>?</span>;
+        
+        const getIcon = (name) => {
+            if (L && L[name]) return L[name];
+            console.warn(`Icon [${name}] không tìm thấy, sử dụng Fallback.`);
+            return FallbackIcon;
+        };
 
-        const LayoutDashboard = safeIcon('LayoutDashboard');
-        const Users = safeIcon('Users');
-        const FileText = safeIcon('FileText');
-        const AlertTriangle = safeIcon('AlertTriangle');
-        const Search = safeIcon('Search');
-        const PlusCircle = safeIcon('PlusCircle');
-        const CheckCircle = safeIcon('CheckCircle');
-        const Clock = safeIcon('Clock');
-        const Sparkles = safeIcon('Sparkles');
-        const Loader2 = safeIcon('Loader2');
-        const Bot = safeIcon('Bot');
-        const FileInput = safeIcon('FileInput');
-        const Save = safeIcon('Save');
-        const X = safeIcon('X');
-        const UserCircle = safeIcon('UserCircle');
-        const FolderOpen = safeIcon('FolderOpen');
-        const ShieldAlert = safeIcon('ShieldAlert');
-        const Target = safeIcon('Target');
-        const Network = safeIcon('Network');
-        const TrendingUp = safeIcon('TrendingUp');
-        const ChevronLeft = safeIcon('ChevronLeft');
-        const ArrowRight = safeIcon('ArrowRight');
-        const Activity = safeIcon('Activity');
-        const HeartHandshake = safeIcon('HeartHandshake');
-        const BriefcaseMedical = safeIcon('BriefcaseMedical');
-        const GraduationCap = safeIcon('GraduationCap');
-        const Scale = safeIcon('Scale');
-        const FileSignature = safeIcon('FileSignature');
-        const UploadCloud = safeIcon('UploadCloud');
-        const FileType = safeIcon('FileType');
-        const Building = safeIcon('Building');
-        const Trash2 = safeIcon('Trash2');
-        const Info = safeIcon('Info');
-        const Edit3 = safeIcon('Edit3');
-        const CalendarClock = safeIcon('CalendarClock');
-        const Timer = safeIcon('Timer');
-        const ListTodo = safeIcon('ListTodo');
-        const BellRing = safeIcon('BellRing');
-        const BarChart3 = safeIcon('BarChart3');
-        const SlidersHorizontal = safeIcon('SlidersHorizontal');
-        const TrendingDown = safeIcon('TrendingDown');
-        const RotateCcw = safeIcon('RotateCcw');
-        const Camera = safeIcon('Camera');
+        const LayoutDashboard = getIcon('LayoutDashboard');
+        const Users = getIcon('Users');
+        const FileText = getIcon('FileText');
+        const AlertTriangle = getIcon('AlertTriangle');
+        const Search = getIcon('Search');
+        const PlusCircle = getIcon('PlusCircle');
+        const CheckCircle = getIcon('CheckCircle');
+        const Clock = getIcon('Clock');
+        const Sparkles = getIcon('Sparkles');
+        const Loader2 = getIcon('Loader2');
+        const Bot = getIcon('Bot');
+        const FileInput = getIcon('FileInput');
+        const Save = getIcon('Save');
+        const X = getIcon('X');
+        const UserCircle = getIcon('UserCircle');
+        const FolderOpen = getIcon('FolderOpen');
+        const ShieldAlert = getIcon('ShieldAlert');
+        const Target = getIcon('Target');
+        const Network = getIcon('Network');
+        const TrendingUp = getIcon('TrendingUp');
+        const ChevronLeft = getIcon('ChevronLeft');
+        const ArrowRight = getIcon('ArrowRight');
+        const Activity = getIcon('Activity');
+        const HeartHandshake = getIcon('HeartHandshake');
+        const BriefcaseMedical = getIcon('BriefcaseMedical');
+        const GraduationCap = getIcon('GraduationCap');
+        const Scale = getIcon('Scale');
+        const FileSignature = getIcon('FileSignature');
+        const UploadCloud = getIcon('UploadCloud');
+        const FileType = getIcon('FileType');
+        const Building = getIcon('Building');
+        const Trash2 = getIcon('Trash2');
+        const Info = getIcon('Info');
+        const Edit3 = getIcon('Edit3');
+        const CalendarClock = getIcon('CalendarClock');
+        const Timer = getIcon('Timer');
+        const ListTodo = getIcon('ListTodo');
+        const BellRing = getIcon('BellRing');
+        const BarChart3 = getIcon('BarChart3');
+        const SlidersHorizontal = getIcon('SlidersHorizontal');
+        const TrendingDown = getIcon('TrendingDown');
+        const RotateCcw = getIcon('RotateCcw');
+        const Camera = getIcon('Camera');
 
-        // DATE HELPERS
+        // 3. DATE HELPERS
         const today = new Date();
         const addDays = (days) => new Date(today.getTime() + days * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN');
         const formatDateToVN = (dateStr) => {
@@ -137,7 +134,7 @@
           return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
         };
 
-        // MINI LINE CHART
+        // 4. MINI LINE CHART
         const MiniLineChart = ({ kpiData }) => {
           if (!kpiData || !kpiData.history || kpiData.history.length === 0) return null;
           const { history, target } = kpiData;
@@ -164,7 +161,7 @@
                 {history.length > 1 && <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
                 {history.map((d, i) => (
                   <g key={i}>
-                    <circle cx={getX(i)} cy={getY(d.value)} r="5" fill="#ffffff" stroke="#3b82f6" strokeWidth="2" className="hover:r-6 hover:fill-blue-100 transition-all cursor-pointer"><title>Ngày chấm: {d.date}&#10;Chỉ số: {d.value}</title></circle>
+                    <circle cx={getX(i)} cy={getY(d.value)} r="5" fill="#ffffff" stroke="#3b82f6" strokeWidth="2" className="hover:fill-blue-100 transition-all cursor-pointer"><title>Ngày chấm: {d.date}&#10;Chỉ số: {d.value}</title></circle>
                     <text x={getX(i)} y={getY(d.value) - 12} fill="#1e293b" fontSize="12" fontWeight="bold" textAnchor="middle">{d.value}</text>
                     <text x={getX(i)} y={height - 10} fill="#64748b" fontSize="10" textAnchor="middle">{d.date.substring(0,5)}</text>
                   </g>
@@ -174,7 +171,7 @@
           );
         };
 
-        // MOCK DATA
+        // 5. MOCK DATA
         const initialClients = [
           { 
             id: 'TE-001', alias: 'L.T.H', age: 16, category: 'Bạo lực gia đình / Bỏ học', riskScore: 16, riskLevel: 'Khẩn cấp', lastVisit: addDays(-2), status: 'Đang can thiệp',
@@ -210,7 +207,7 @@
           }
         ];
 
-        // MAIN COMPONENT
+        // 6. MAIN COMPONENT
         function CaseManagementDemo() {
           const [activeTab, setActiveTab] = useState('dashboard');
           const [clients, setClients] = useState(initialClients);
@@ -278,7 +275,7 @@
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
 
           const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
-          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thôngত্তি!', 'success'); };
+          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
 
           const startEditingSwot = () => { setEditSwotData({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n') }); setIsEditingSwot(true); };
           const saveEditingSwot = () => { updateClientInState({ ...selectedClient, details: { ...selectedClient.details, swot: { S: editSwotData.S.split('\n').filter(i=>i.trim()), W: editSwotData.W.split('\n').filter(i=>i.trim()), O: editSwotData.O.split('\n').filter(i=>i.trim()), T: editSwotData.T.split('\n').filter(i=>i.trim()) } } }); setIsEditingSwot(false); showAlert('Thành công', 'Đã cập nhật SWOT!', 'success'); };
@@ -539,9 +536,14 @@
 
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="flex overflow-x-auto border-b border-slate-200 hide-scrollbar">
-                          {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Đánh giá SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => (
-                            <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}><tab.icon size={18} /> {tab.label}</button>
-                          ))}
+                          {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Đánh giá SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => {
+                            const IconComponent = tab.icon;
+                            return (
+                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
+                                <IconComponent size={18} /> {tab.label}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         <div className="p-8">
@@ -707,7 +709,11 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ErrorBoundary><CaseManagementDemo /></ErrorBoundary>);
+        root.render(
+            <ErrorBoundary>
+                <CaseManagementDemo />
+            </ErrorBoundary>
+        );
     </script>
 </body>
 </html>
