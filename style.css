@@ -1,0 +1,30 @@
+/* Ẩn thanh cuộn (scrollbar) cho các phần nội dung nhưng vẫn cho phép cuộn */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Hiệu ứng xuất hiện mượt mà (Fade In & Slide In) */
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-in {
+    animation: fadeInSlideUp 0.4s ease-out forwards;
+}
+
+/* Tùy chỉnh màu highlight bôi đen text */
+::selection {
+    background-color: #bfdbfe; /* blue-200 */
+    color: #1e3a8a; /* blue-900 */
+}
