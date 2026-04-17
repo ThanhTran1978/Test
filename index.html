@@ -113,14 +113,23 @@
         const TrendingDown = (p) => <TextIcon symbol="📉" {...p} />;
         const RotateCcw = (p) => <TextIcon symbol="🔄" {...p} />;
         const Camera = (p) => <TextIcon symbol="📷" {...p} />;
+        const ArrowUp = (p) => <TextIcon symbol="⬆️" {...p} />;
+        const ArrowDown = (p) => <TextIcon symbol="⬇️" {...p} />;
 
         // 3. HELPERS
         const today = new Date();
         const addDays = (days) => new Date(today.getTime() + days * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN');
+        
+        // Cắt ISO String để lấy YYYY-MM-DD cho thẻ <input type="date">
+        const getTodayYMD = () => new Date().toISOString().split('T')[0];
+        
         const formatDateToVN = (dateStr) => {
           if (!dateStr) return '';
-          const [year, month, day] = dateStr.split('-');
-          return `${day}/${month}/${year}`;
+          if (dateStr.includes('-')) {
+             const [year, month, day] = dateStr.split('-');
+             return `${day}/${month}/${year}`;
+          }
+          return dateStr;
         };
         const parseDateStr = (dateStr) => {
           if (!dateStr) return new Date();
@@ -202,8 +211,10 @@
           const [isEditingInfo, setIsEditingInfo] = useState(false);
           const [editInfoData, setEditInfoData] = useState({});
           
-          const [isEditingSwot, setIsEditingSwot] = useState(false);
-          const [editSwotData, setEditSwotData] = useState({ S: '', W: '', O: '', T: '' });
+          // SWOT & VẤN ĐỀ
+          const [isEditingAssessment, setIsEditingAssessment] = useState(false);
+          const [editAssessmentData, setEditAssessmentData] = useState({ S: '', W: '', O: '', T: '', problems: [] });
+          const [newEditProblemText, setNewEditProblemText] = useState('');
 
           const [showAddGoalForm, setShowAddGoalForm] = useState(false);
           const [newGoalData, setNewGoalData] = useState({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm', activity: '' });
@@ -222,7 +233,10 @@
           const [isEditingEvalNote, setIsEditingEvalNote] = useState(false);
           const [evalNoteData, setEvalNoteData] = useState('');
 
-          const [newClient, setNewClient] = useState({ fullName: '', studentId: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
+          // Thêm Khuyết tật, Ngày ghi nhận, Vấn đề vào Khởi tạo
+          const [newClient, setNewClient] = useState({ fullName: '', studentId: '', recordDate: getTodayYMD(), disabilityStatus: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', problems: [], swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
+          const [newProblemText, setNewProblemText] = useState('');
+          
           const [rawNotes, setRawNotes] = useState('');
           const [isExtractingInfo, setIsExtractingInfo] = useState(false);
           const [extractError, setExtractError] = useState('');
@@ -237,6 +251,17 @@
             const reader = new FileReader();
             reader.onload = (event) => { stateSetter({ ...currentState, avatar: event.target.result }); };
             reader.readAsDataURL(file);
+          };
+
+          // HÀM HỖ TRỢ DI CHUYỂN ITEM TRONG MẢNG (SẮP XẾP ƯU TIÊN VẤN ĐỀ)
+          const moveArrayItem = (arr, index, direction) => {
+              const newArr = [...arr];
+              if (direction === 'up' && index > 0) {
+                  [newArr[index - 1], newArr[index]] = [newArr[index], newArr[index - 1]];
+              } else if (direction === 'down' && index < newArr.length - 1) {
+                  [newArr[index + 1], newArr[index]] = [newArr[index], newArr[index + 1]];
+              }
+              return newArr;
           };
 
           const getGoalWarning = (deadlineStr, status) => {
@@ -265,7 +290,7 @@
           };
 
           const updateClientInState = (updated) => { setClients(clients.map(c => c.id === updated.id ? updated : c)); setSelectedClient(updated); };
-          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null); setIsEditingEvalNote(false); };
+          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingAssessment(false); setShowAddGoalForm(false); setEditingGoalId(null); setIsEditingEvalNote(false); };
           
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
           
@@ -280,17 +305,61 @@
           };
 
           // --- INFO EDIT LOGIC ---
-          const startEditingInfo = () => { setEditInfoData({ fullName: selectedClient.fullName, studentId: selectedClient.studentId, age: selectedClient.age, ethnicity: selectedClient.ethnicity || '', religion: selectedClient.religion || '', category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, needs: selectedClient.details.needs || '', notes: selectedClient.details.notes || '', avatar: selectedClient.avatar }); setIsEditingInfo(true); };
+          const startEditingInfo = () => { 
+              // Convert stored DD/MM/YYYY back to YYYY-MM-DD for input type="date"
+              let fmtDate = getTodayYMD();
+              if (selectedClient.recordDate) {
+                  const parts = selectedClient.recordDate.split('/');
+                  if (parts.length === 3) fmtDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              }
+              
+              setEditInfoData({ 
+                  fullName: selectedClient.fullName, studentId: selectedClient.studentId, 
+                  recordDate: fmtDate, disabilityStatus: selectedClient.disabilityStatus || '',
+                  age: selectedClient.age, ethnicity: selectedClient.ethnicity || '', religion: selectedClient.religion || '', 
+                  category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, 
+                  phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, 
+                  needs: selectedClient.details.needs || '', notes: selectedClient.details.notes || '', avatar: selectedClient.avatar 
+              }); 
+              setIsEditingInfo(true); 
+          };
           const saveEditingInfo = () => { 
             const newAlias = getAliasFromName(editInfoData.fullName);
-            updateClientInState({ ...selectedClient, fullName: editInfoData.fullName, alias: newAlias, studentId: editInfoData.studentId, age: editInfoData.age, ethnicity: editInfoData.ethnicity, religion: editInfoData.religion, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, needs: editInfoData.needs, notes: editInfoData.notes } }); 
+            updateClientInState({ 
+                ...selectedClient, fullName: editInfoData.fullName, alias: newAlias, studentId: editInfoData.studentId, 
+                recordDate: formatDateToVN(editInfoData.recordDate), disabilityStatus: editInfoData.disabilityStatus,
+                age: editInfoData.age, ethnicity: editInfoData.ethnicity, religion: editInfoData.religion, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, 
+                details: { ...selectedClient.details, family: editInfoData.family, needs: editInfoData.needs, notes: editInfoData.notes } 
+            }); 
             setIsEditingInfo(false); 
             showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); 
           };
 
-          // --- SWOT EDIT LOGIC ---
-          const startEditingSwot = () => { setEditSwotData({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n') }); setIsEditingSwot(true); };
-          const saveEditingSwot = () => { updateClientInState({ ...selectedClient, details: { ...selectedClient.details, swot: { S: editSwotData.S.split('\n').filter(i=>i.trim()), W: editSwotData.W.split('\n').filter(i=>i.trim()), O: editSwotData.O.split('\n').filter(i=>i.trim()), T: editSwotData.T.split('\n').filter(i=>i.trim()) } } }); setIsEditingSwot(false); showAlert('Thành công', 'Đã cập nhật SWOT!', 'success'); };
+          // --- ASSESSMENT (SWOT + VẤN ĐỀ) EDIT LOGIC ---
+          const startEditingAssessment = () => { 
+              setEditAssessmentData({ 
+                  S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), 
+                  O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n'),
+                  problems: [...(selectedClient.details.problems || [])]
+              }); 
+              setNewEditProblemText('');
+              setIsEditingAssessment(true); 
+          };
+          const saveEditingAssessment = () => { 
+              updateClientInState({ 
+                  ...selectedClient, 
+                  details: { 
+                      ...selectedClient.details, 
+                      problems: editAssessmentData.problems,
+                      swot: { 
+                          S: editAssessmentData.S.split('\n').filter(i=>i.trim()), W: editAssessmentData.W.split('\n').filter(i=>i.trim()), 
+                          O: editAssessmentData.O.split('\n').filter(i=>i.trim()), T: editAssessmentData.T.split('\n').filter(i=>i.trim()) 
+                      } 
+                  } 
+              }); 
+              setIsEditingAssessment(false); 
+              showAlert('Thành công', 'Đã cập nhật Đánh giá và Vấn đề!', 'success'); 
+          };
 
           // --- GOALS EDIT LOGIC ---
           const handleToggleGoalStatus = (goalId, currentStatus) => {
@@ -385,17 +454,20 @@
             const prompt = `Bạn là Nhân viên CTXH chuyên nghiệp. Hãy phân tích báo cáo sau và xuất ra ĐÚNG ĐỊNH DẠNG JSON.
             Cấu trúc JSON yêu cầu:
             {
+              "recordDate": "Ngày ghi nhận hồ sơ (Định dạng YYYY-MM-DD)",
               "fullName": "Họ và tên thật của thân chủ",
               "studentId": "Mã số sinh viên (nếu có)",
               "age": "Số tuổi",
+              "disabilityStatus": "Tình trạng khuyết tật (VD: Vận động, Thị giác, Thính giác, Không có, v.v.)",
               "ethnicity": "Dân tộc",
               "religion": "Tôn giáo",
-              "category": "Nhóm đối tượng chính (VD: Sinh viên khuyết tật vận động, Khó khăn tài chính)",
+              "category": "Nhóm đối tượng chính",
               "interventionLevel": "BẮT BUỘC CHỌN 1 TRONG 4 (Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi)",
               "phone": "Số điện thoại",
               "address": "Nơi ở hiện tại",
               "family": "Tóm tắt hoàn cảnh gia đình",
               "needs": "Nhu cầu, mong muốn của thân chủ",
+              "problems": ["Vấn đề ưu tiên 1", "Vấn đề ưu tiên 2", "Vấn đề ưu tiên 3"],
               "swot_S": "Gạch đầu dòng điểm mạnh",
               "swot_W": "Gạch đầu dòng điểm yếu",
               "swot_O": "Gạch đầu dòng cơ hội",
@@ -486,27 +558,28 @@
           
           const handleSaveNewClient = () => {
             if (!newClient.fullName) { showAlert('Lỗi', 'Cần nhập Họ và tên đầy đủ.', 'error'); return; }
-            const todayStr = new Date().toLocaleDateString('vi-VN');
+            const recordDateVN = formatDateToVN(newClient.recordDate);
             const processArr = (val) => Array.isArray(val) ? val : (val ? val.split('\n').filter(i=>i.trim()) : ['Chưa cập nhật']);
             
-            // Xử lý tự động ẩn danh khi lưu
             const newAlias = getAliasFromName(newClient.fullName);
             
             setClients([{ 
               id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, 
+              recordDate: recordDateVN,
               fullName: newClient.fullName,
               alias: newAlias, 
               studentId: newClient.studentId,
+              disabilityStatus: newClient.disabilityStatus || 'Không có / Chưa rõ',
               age: newClient.age || 'N/A', 
               ethnicity: newClient.ethnicity || 'Không rõ',
               religion: newClient.religion || 'Không rõ',
               category: newClient.category || 'Chưa phân loại', 
               interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', 
-              lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
-              details: { family: newClient.family || 'Chưa thu thập', needs: newClient.needs || 'Chưa ghi nhận', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', evaluationNotes: '', goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
+              lastVisit: recordDateVN, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
+              details: { family: newClient.family || 'Chưa thu thập', needs: newClient.needs || 'Chưa ghi nhận', history: newClient.history || 'Chưa thu thập', problems: newClient.problems || [], swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', evaluationNotes: '', goals: [], referrals: [], timeline: [{ date: recordDateVN, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
             
-            setNewClient({ fullName: '', studentId: '', alias: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); 
+            setNewClient({ fullName: '', studentId: '', recordDate: getTodayYMD(), disabilityStatus: '', alias: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', problems: [], swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); 
             setRawNotes(''); 
             showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); 
             setActiveTab('clients');
@@ -642,8 +715,9 @@
                       </div>
 
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="bg-slate-800 text-white p-5 px-8 flex items-center gap-3"><UserCircle size={24} /><h3 className="font-bold text-lg">Biểu mẫu Tiếp nhận & SWOT</h3></div>
+                        <div className="bg-slate-800 text-white p-5 px-8 flex items-center gap-3"><UserCircle size={24} /><h3 className="font-bold text-lg">Biểu mẫu Tiếp nhận & Đánh giá</h3></div>
                         <div className="p-8 space-y-8">
+                          {/* A. THÔNG TIN CƠ BẢN */}
                           <div>
                             <h4 className="text-md font-bold text-blue-700 border-b-2 border-slate-100 pb-3 mb-5 uppercase">A. Thông Tin Cơ Bản</h4>
                             <div className="flex flex-col sm:flex-row gap-6 mb-6">
@@ -653,30 +727,62 @@
                                   <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleAvatarUpload(e, setNewClient, newClient)} />
                                 </div>
                               </div>
-                              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div><label className="block text-sm font-bold mb-2">Họ và tên đầy đủ *</label><input type="text" value={newClient.fullName} onChange={(e) => setNewClient({...newClient, fullName: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="VD: Nguyễn Văn A" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Mã số sinh viên</label><input type="text" value={newClient.studentId} onChange={(e) => setNewClient({...newClient, studentId: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Nhập MSSV nếu có" /></div>
-                                <div><label className="block text-sm font-bold mb-2">Mức độ can thiệp</label>
-                                    <select value={newClient.interventionLevel} onChange={(e) => setNewClient({...newClient, interventionLevel: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none">
+                                <div><label className="block text-sm font-bold mb-2 text-blue-700">Ngày ghi nhận *</label><input type="date" value={newClient.recordDate} onChange={(e) => setNewClient({...newClient, recordDate: e.target.value})} className="w-full p-3 border rounded-xl bg-blue-50 outline-none" /></div>
+                                
+                                <div><label className="block text-sm font-bold mb-2 text-purple-700">Mức độ can thiệp</label>
+                                    <select value={newClient.interventionLevel} onChange={(e) => setNewClient({...newClient, interventionLevel: e.target.value})} className="w-full p-3 border rounded-xl bg-purple-50 outline-none">
                                         <option value="Can thiệp Khẩn cấp">Can thiệp Khẩn cấp</option>
                                         <option value="Can thiệp Chuyên sâu">Can thiệp Chuyên sâu</option>
                                         <option value="Hỗ trợ Cơ bản">Hỗ trợ Cơ bản</option>
                                         <option value="Phòng ngừa/Theo dõi">Phòng ngừa/Theo dõi</option>
                                     </select>
                                 </div>
+                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2 text-red-700">Tình trạng khuyết tật</label><input type="text" value={newClient.disabilityStatus} onChange={(e) => setNewClient({...newClient, disabilityStatus: e.target.value})} className="w-full p-3 border rounded-xl bg-red-50 outline-none" placeholder="VD: Vận động, Thị giác, Thính giác..." /></div>
+                                
                                 <div><label className="block text-sm font-bold mb-2">Độ tuổi</label><input type="number" value={newClient.age} onChange={(e) => setNewClient({...newClient, age: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Dân tộc</label><input type="text" value={newClient.ethnicity} onChange={(e) => setNewClient({...newClient, ethnicity: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="VD: Kinh" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Tôn giáo</label><input type="text" value={newClient.religion} onChange={(e) => setNewClient({...newClient, religion: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="VD: Không" /></div>
-                                <div><label className="block text-sm font-bold mb-2">Nhóm vấn đề</label><input type="text" value={newClient.category} onChange={(e) => setNewClient({...newClient, category: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                
+                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Nhóm vấn đề (Phân loại khác)</label><input type="text" value={newClient.category} onChange={(e) => setNewClient({...newClient, category: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Số điện thoại</label><input type="text" value={newClient.phone} onChange={(e) => setNewClient({...newClient, phone: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
-                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Hoàn cảnh gia đình</label><textarea rows={2} value={newClient.family} onChange={(e) => setNewClient({...newClient, family: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
-                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Nhu cầu, mong muốn của thân chủ</label><textarea rows={2} value={newClient.needs} onChange={(e) => setNewClient({...newClient, needs: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
-                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Ghi chú chuyên môn (Nếu có)</label><textarea rows={2} value={newClient.notes} onChange={(e) => setNewClient({...newClient, notes: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Những lưu ý thêm trong quá trình tiếp xúc..." /></div>
+                                
+                                <div className="md:col-span-3"><label className="block text-sm font-bold mb-2">Hoàn cảnh gia đình</label><textarea rows={2} value={newClient.family} onChange={(e) => setNewClient({...newClient, family: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div className="md:col-span-3"><label className="block text-sm font-bold mb-2">Nhu cầu, mong muốn của thân chủ</label><textarea rows={2} value={newClient.needs} onChange={(e) => setNewClient({...newClient, needs: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
+                                <div className="md:col-span-3"><label className="block text-sm font-bold mb-2">Ghi chú chuyên môn (Nếu có)</label><textarea rows={2} value={newClient.notes} onChange={(e) => setNewClient({...newClient, notes: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Những lưu ý thêm trong quá trình tiếp xúc..." /></div>
                               </div>
                             </div>
                           </div>
+
+                          {/* B. ĐÁNH GIÁ & VẤN ĐỀ */}
                           <div>
-                            <h4 className="text-md font-bold text-blue-700 border-b-2 border-slate-100 pb-3 mb-5 uppercase">B. Phân Tích SWOT</h4>
+                            <h4 className="text-md font-bold text-blue-700 border-b-2 border-slate-100 pb-3 mb-5 uppercase">B. Đánh Giá & Vấn Đề</h4>
+                            
+                            {/* Danh sách vấn đề */}
+                            <div className="mb-6 bg-amber-50 border border-amber-200 p-5 rounded-xl">
+                                <label className="block text-sm font-bold text-amber-900 mb-3">Danh sách Vấn đề Ưu tiên (Sắp xếp theo mức độ nghiêm trọng)</label>
+                                <div className="flex gap-2 mb-4">
+                                    <input type="text" value={newProblemText} onChange={e => setNewProblemText(e.target.value)} onKeyPress={e => {if(e.key==='Enter'){e.preventDefault(); if(newProblemText.trim()){setNewClient({...newClient, problems: [...newClient.problems, newProblemText.trim()]}); setNewProblemText('');}}}} placeholder="Nhập vấn đề và nhấn nút Thêm..." className="flex-1 p-2 rounded-lg border outline-none" />
+                                    <button onClick={() => {if(newProblemText.trim()){setNewClient({...newClient, problems: [...newClient.problems, newProblemText.trim()]}); setNewProblemText('');}}} className="px-4 py-2 bg-amber-600 text-white font-bold rounded-lg whitespace-nowrap">Thêm vấn đề</button>
+                                </div>
+                                <div className="space-y-2">
+                                    {newClient.problems.map((prob, idx) => (
+                                        <div key={idx} className="flex justify-between items-center bg-white p-3 rounded border shadow-sm">
+                                            <span className="font-medium"><span className="text-amber-600 font-black mr-2">{idx + 1}.</span> {prob}</span>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => setNewClient({...newClient, problems: moveArrayItem(newClient.problems, idx, 'up')})} className="p-1 text-slate-400 hover:text-blue-600" disabled={idx===0}><ArrowUp size={16}/></button>
+                                                <button onClick={() => setNewClient({...newClient, problems: moveArrayItem(newClient.problems, idx, 'down')})} className="p-1 text-slate-400 hover:text-blue-600" disabled={idx===newClient.problems.length-1}><ArrowDown size={16}/></button>
+                                                <button onClick={() => setNewClient({...newClient, problems: newClient.problems.filter((_, i) => i !== idx)})} className="p-1 text-slate-400 hover:text-red-600 ml-2"><Trash2 size={16}/></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {newClient.problems.length === 0 && <p className="text-sm text-amber-700 italic">Chưa có vấn đề nào được ghi nhận.</p>}
+                                </div>
+                            </div>
+
+                            {/* SWOT */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div><label className="block text-sm font-bold text-emerald-700 mb-2">S - Điểm mạnh</label><textarea rows={3} value={newClient.swot_S} onChange={(e) => setNewClient({...newClient, swot_S: e.target.value})} className="w-full p-3 border border-emerald-200 rounded-xl bg-emerald-50 outline-none" /></div>
                               <div><label className="block text-sm font-bold text-orange-700 mb-2">W - Điểm yếu</label><textarea rows={3} value={newClient.swot_W} onChange={(e) => setNewClient({...newClient, swot_W: e.target.value})} className="w-full p-3 border border-orange-200 rounded-xl bg-orange-50 outline-none" /></div>
@@ -693,6 +799,7 @@
                     </div>
                   )}
 
+                  {/* DETAIL VIEW */}
                   {activeTab === 'clientDetail' && selectedClient && (
                     <div className="max-w-5xl mx-auto animate-in">
                       <div className="flex justify-between items-center mb-6">
@@ -708,17 +815,23 @@
                           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-100 flex-shrink-0 bg-blue-50 flex items-center justify-center">
                             {selectedClient.avatar ? <img src={selectedClient.avatar} className="w-full h-full object-cover" /> : <span className="font-black text-2xl text-blue-700">{selectedClient.alias?.charAt(0) || 'U'}</span>}
                           </div>
-                          <div><h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">Hồ sơ: {selectedClient.id} {getInterventionBadge(selectedClient.interventionLevel)}</h2><p className="text-slate-500 font-medium mt-1">Họ tên: {selectedClient.fullName || selectedClient.alias} • MSSV: {selectedClient.studentId || 'N/A'}</p></div>
+                          <div>
+                            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">Hồ sơ: {selectedClient.id} {getInterventionBadge(selectedClient.interventionLevel)}</h2>
+                            <p className="text-slate-500 font-medium mt-1">Họ tên: <span className="font-bold text-slate-700">{selectedClient.fullName || selectedClient.alias}</span> • MSSV: {selectedClient.studentId || 'N/A'}</p>
+                          </div>
                         </div>
-                        <div className="text-right"><p className="text-sm text-slate-500 font-bold">Trạng thái</p><span className="inline-block mt-1 px-3 py-1 bg-slate-800 text-white text-sm font-bold rounded-full">{selectedClient.status}</span></div>
+                        <div className="text-right">
+                            <p className="text-sm text-slate-500 font-bold mb-1">Ngày ghi nhận: {selectedClient.recordDate || 'N/A'}</p>
+                            <span className="inline-block px-3 py-1 bg-slate-800 text-white text-sm font-bold rounded-full">{selectedClient.status}</span>
+                        </div>
                       </div>
 
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="flex overflow-x-auto border-b border-slate-200 hide-scrollbar">
-                          {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Đánh giá SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => {
+                          {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Vấn đề & SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => {
                             const IconComponent = tab.icon;
                             return (
-                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null); setIsEditingEvalNote(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
+                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingAssessment(false); setShowAddGoalForm(false); setEditingGoalId(null); setIsEditingEvalNote(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
                                 <IconComponent size={18} /> {tab.label}
                               </button>
                             );
@@ -726,6 +839,7 @@
                         </div>
 
                         <div className="p-8">
+                          {/* TAB 1: THÔNG TIN */}
                           {detailSubTab === 'info' && (
                             <div className="space-y-6 animate-in">
                               <div className="flex justify-between items-center mb-2">
@@ -736,7 +850,21 @@
                               
                               {!isEditingInfo ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID Hệ thống:</strong> {selectedClient.id}</li><li><strong>Họ và tên đầy đủ:</strong> <span className="font-bold text-blue-700">{selectedClient.fullName || selectedClient.alias}</span></li><li><strong>Bí danh hiển thị ngoài:</strong> {selectedClient.alias}</li><li><strong>Mã số sinh viên:</strong> {selectedClient.studentId || 'Chưa cập nhật'}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Dân tộc:</strong> {selectedClient.ethnicity || 'Không rõ'}</li><li><strong>Tôn giáo:</strong> {selectedClient.religion || 'Không rõ'}</li><li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li></ul></div>
+                                  <div>
+                                    <h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4>
+                                    <ul className="space-y-3 text-slate-600">
+                                        <li><strong>Mã ID Hệ thống:</strong> {selectedClient.id}</li>
+                                        <li><strong>Họ và tên đầy đủ:</strong> <span className="font-bold text-blue-700">{selectedClient.fullName || selectedClient.alias}</span></li>
+                                        <li><strong>Bí danh hiển thị ngoài:</strong> {selectedClient.alias}</li>
+                                        <li><strong>Mã số sinh viên:</strong> {selectedClient.studentId || 'Chưa cập nhật'}</li>
+                                        <li><strong>Ngày ghi nhận hồ sơ:</strong> {selectedClient.recordDate || 'Chưa cập nhật'}</li>
+                                        <li><strong>Tình trạng khuyết tật:</strong> <span className="font-semibold text-red-600">{selectedClient.disabilityStatus || 'Không có / Chưa rõ'}</span></li>
+                                        <li><strong>Độ tuổi:</strong> {selectedClient.age}</li>
+                                        <li><strong>Dân tộc:</strong> {selectedClient.ethnicity || 'Không rõ'}</li>
+                                        <li><strong>Tôn giáo:</strong> {selectedClient.religion || 'Không rõ'}</li>
+                                        <li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li>
+                                    </ul>
+                                  </div>
                                   <div className="space-y-6">
                                     <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family || "Chưa có thông tin"}</p></div>
                                     <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhu cầu, mong muốn</h4><p className="text-slate-600 leading-relaxed bg-blue-50 p-4 rounded-xl border border-blue-100 whitespace-pre-wrap">{selectedClient.details?.needs || "Chưa ghi nhận."}</p></div>
@@ -748,6 +876,9 @@
                                   <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div><label className="block text-sm font-bold mb-1">Họ và tên đầy đủ</label><input type="text" value={editInfoData.fullName || ''} onChange={(e) => setEditInfoData({...editInfoData, fullName: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Nguyễn Văn A" /></div>
                                     <div><label className="block text-sm font-bold mb-1">Mã số sinh viên</label><input type="text" value={editInfoData.studentId || ''} onChange={(e) => setEditInfoData({...editInfoData, studentId: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Nhập MSSV" /></div>
+                                    <div><label className="block text-sm font-bold mb-1 text-blue-700">Ngày ghi nhận</label><input type="date" value={editInfoData.recordDate || getTodayYMD()} onChange={(e) => setEditInfoData({...editInfoData, recordDate: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1 text-red-700">Tình trạng khuyết tật</label><input type="text" value={editInfoData.disabilityStatus || ''} onChange={(e) => setEditInfoData({...editInfoData, disabilityStatus: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Vận động, Thị giác..." /></div>
+                                    
                                     <div><label className="block text-sm font-bold mb-1">Mức can thiệp</label>
                                         <select value={editInfoData.interventionLevel} onChange={(e) => setEditInfoData({...editInfoData, interventionLevel: e.target.value})} className="w-full p-2 border rounded-lg">
                                             <option value="Can thiệp Khẩn cấp">Can thiệp Khẩn cấp</option>
@@ -768,30 +899,77 @@
                             </div>
                           )}
 
+                          {/* TAB 2: ĐÁNH GIÁ (VẤN ĐỀ + SWOT) */}
                           {detailSubTab === 'assessment' && (
                             <div className="space-y-6 animate-in">
                                <div className="flex justify-between items-start mb-6">
-                                <h3 className="font-black text-xl text-slate-800">Phân tích SWOT</h3>
-                                {!isEditingSwot ? ( <button onClick={startEditingSwot} className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm"><Edit3 size={16}/> Chỉnh sửa</button>
-                                ) : ( <div className="flex gap-2"><button onClick={() => setIsEditingSwot(false)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg font-bold text-sm">Hủy</button><button onClick={saveEditingSwot} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm flex items-center gap-2"><Save size={16}/> Lưu lại</button></div> )}
+                                <h3 className="font-black text-xl text-slate-800">Đánh giá & Phân tích Vấn đề</h3>
+                                {!isEditingAssessment ? ( <button onClick={startEditingAssessment} className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm"><Edit3 size={16}/> Chỉnh sửa</button>
+                                ) : ( <div className="flex gap-2"><button onClick={() => setIsEditingAssessment(false)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg font-bold text-sm">Hủy</button><button onClick={saveEditingAssessment} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm flex items-center gap-2"><Save size={16}/> Lưu lại</button></div> )}
                                </div>
                                
-                               {!isEditingSwot ? (
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl"><h4 className="font-bold text-emerald-800 mb-4 border-b border-emerald-200 pb-2">S - Điểm mạnh</h4><ul className="space-y-2">{selectedClient.details?.swot?.S?.map((s, i) => (<li key={i} className="flex text-emerald-900 text-sm font-medium"><CheckCircle size={16} className="text-emerald-500 mr-2 mt-0.5"/> {s}</li>))}</ul></div>
-                                    <div className="bg-orange-50 border border-orange-200 p-6 rounded-2xl"><h4 className="font-bold text-orange-800 mb-4 border-b border-orange-200 pb-2">W - Điểm yếu</h4><ul className="space-y-2">{selectedClient.details?.swot?.W?.map((w, i) => (<li key={i} className="flex text-orange-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-2 mt-1.5"/> {w}</li>))}</ul></div>
-                                    <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl"><h4 className="font-bold text-blue-800 mb-4 border-b border-blue-200 pb-2">O - Cơ hội</h4><ul className="space-y-2">{selectedClient.details?.swot?.O?.map((o, i) => (<li key={i} className="flex text-blue-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 mt-1.5"/> {o}</li>))}</ul></div>
-                                    <div className="bg-purple-50 border border-purple-200 p-6 rounded-2xl"><h4 className="font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2">T - Thách thức</h4><ul className="space-y-2">{selectedClient.details?.swot?.T?.map((t, i) => (<li key={i} className="flex text-purple-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-2 mt-1.5"/> {t}</li>))}</ul></div>
+                               {!isEditingAssessment ? (
+                                 <div className="space-y-6">
+                                    {/* Màn hình hiển thị Vấn đề */}
+                                    <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl">
+                                        <h4 className="font-bold text-amber-900 text-lg mb-4 border-b border-amber-200 pb-2">Danh sách Vấn đề Ưu tiên</h4>
+                                        {selectedClient.details?.problems?.length > 0 ? (
+                                            <ul className="space-y-3">
+                                                {selectedClient.details.problems.map((prob, idx) => (
+                                                    <li key={idx} className="flex items-start text-amber-900 bg-white p-3 rounded-lg shadow-sm border border-amber-100">
+                                                        <span className="font-black text-amber-600 mr-3 text-lg w-6">{idx + 1}.</span> 
+                                                        <span className="font-medium pt-0.5">{prob}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (<p className="text-amber-700 italic">Chưa có đánh giá vấn đề.</p>)}
+                                    </div>
+
+                                    {/* Màn hình hiển thị SWOT */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl"><h4 className="font-bold text-emerald-800 mb-4 border-b border-emerald-200 pb-2">S - Điểm mạnh</h4><ul className="space-y-2">{selectedClient.details?.swot?.S?.map((s, i) => (<li key={i} className="flex text-emerald-900 text-sm font-medium"><CheckCircle size={16} className="text-emerald-500 mr-2 mt-0.5"/> {s}</li>))}</ul></div>
+                                        <div className="bg-orange-50 border border-orange-200 p-6 rounded-2xl"><h4 className="font-bold text-orange-800 mb-4 border-b border-orange-200 pb-2">W - Điểm yếu</h4><ul className="space-y-2">{selectedClient.details?.swot?.W?.map((w, i) => (<li key={i} className="flex text-orange-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-2 mt-1.5"/> {w}</li>))}</ul></div>
+                                        <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl"><h4 className="font-bold text-blue-800 mb-4 border-b border-blue-200 pb-2">O - Cơ hội</h4><ul className="space-y-2">{selectedClient.details?.swot?.O?.map((o, i) => (<li key={i} className="flex text-blue-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 mt-1.5"/> {o}</li>))}</ul></div>
+                                        <div className="bg-purple-50 border border-purple-200 p-6 rounded-2xl"><h4 className="font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2">T - Thách thức</h4><ul className="space-y-2">{selectedClient.details?.swot?.T?.map((t, i) => (<li key={i} className="flex text-purple-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-2 mt-1.5"/> {t}</li>))}</ul></div>
+                                    </div>
                                  </div>
                                ) : (
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-2xl border border-blue-100">
-                                    <div><label className="block text-sm font-bold text-emerald-700 mb-2">Điểm mạnh</label><textarea rows={4} value={editSwotData.S} onChange={(e) => setEditSwotData({...editSwotData, S: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
-                                    <div><label className="block text-sm font-bold text-orange-700 mb-2">Điểm yếu</label><textarea rows={4} value={editSwotData.W} onChange={(e) => setEditSwotData({...editSwotData, W: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
+                                 <div className="space-y-6">
+                                    {/* Màn hình sửa Vấn đề */}
+                                    <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200">
+                                        <label className="block text-sm font-bold text-amber-900 mb-3">Danh sách Vấn đề Ưu tiên (Sắp xếp theo mức độ nghiêm trọng)</label>
+                                        <div className="flex gap-2 mb-4">
+                                            <input type="text" value={newEditProblemText} onChange={e => setNewEditProblemText(e.target.value)} onKeyPress={e => {if(e.key==='Enter'){e.preventDefault(); if(newEditProblemText.trim()){setEditAssessmentData({...editAssessmentData, problems: [...editAssessmentData.problems, newEditProblemText.trim()]}); setNewEditProblemText('');}}}} placeholder="Nhập vấn đề mới và nhấn nút Thêm..." className="flex-1 p-2 rounded-lg border outline-none" />
+                                            <button onClick={() => {if(newEditProblemText.trim()){setEditAssessmentData({...editAssessmentData, problems: [...editAssessmentData.problems, newEditProblemText.trim()]}); setNewEditProblemText('');}}} className="px-4 py-2 bg-amber-600 text-white font-bold rounded-lg whitespace-nowrap">Thêm</button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {editAssessmentData.problems.map((prob, idx) => (
+                                                <div key={idx} className="flex justify-between items-center bg-white p-3 rounded border shadow-sm">
+                                                    <span className="font-medium"><span className="text-amber-600 font-black mr-2">{idx + 1}.</span> <input type="text" value={prob} onChange={e => {const newProbs = [...editAssessmentData.problems]; newProbs[idx] = e.target.value; setEditAssessmentData({...editAssessmentData, problems: newProbs});}} className="outline-none border-b border-dashed border-slate-300 bg-transparent w-full min-w-[300px]"/></span>
+                                                    <div className="flex gap-1 shrink-0">
+                                                        <button onClick={() => setEditAssessmentData({...editAssessmentData, problems: moveArrayItem(editAssessmentData.problems, idx, 'up')})} className="p-1 text-slate-400 hover:text-blue-600" disabled={idx===0}><ArrowUp size={16}/></button>
+                                                        <button onClick={() => setEditAssessmentData({...editAssessmentData, problems: moveArrayItem(editAssessmentData.problems, idx, 'down')})} className="p-1 text-slate-400 hover:text-blue-600" disabled={idx===editAssessmentData.problems.length-1}><ArrowDown size={16}/></button>
+                                                        <button onClick={() => setEditAssessmentData({...editAssessmentData, problems: editAssessmentData.problems.filter((_, i) => i !== idx)})} className="p-1 text-slate-400 hover:text-red-600 ml-2"><Trash2 size={16}/></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {editAssessmentData.problems.length === 0 && <p className="text-sm text-amber-700 italic">Chưa có vấn đề.</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Màn hình sửa SWOT */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-2xl border border-blue-100">
+                                        <div><label className="block text-sm font-bold text-emerald-700 mb-2">Điểm mạnh</label><textarea rows={4} value={editAssessmentData.S} onChange={(e) => setEditAssessmentData({...editAssessmentData, S: e.target.value})} className="w-full p-3 border rounded-xl outline-none" /></div>
+                                        <div><label className="block text-sm font-bold text-orange-700 mb-2">Điểm yếu</label><textarea rows={4} value={editAssessmentData.W} onChange={(e) => setEditAssessmentData({...editAssessmentData, W: e.target.value})} className="w-full p-3 border rounded-xl outline-none" /></div>
+                                        <div><label className="block text-sm font-bold text-blue-700 mb-2">Cơ hội</label><textarea rows={4} value={editAssessmentData.O} onChange={(e) => setEditAssessmentData({...editAssessmentData, O: e.target.value})} className="w-full p-3 border rounded-xl outline-none" /></div>
+                                        <div><label className="block text-sm font-bold text-purple-700 mb-2">Thách thức</label><textarea rows={4} value={editAssessmentData.T} onChange={(e) => setEditAssessmentData({...editAssessmentData, T: e.target.value})} className="w-full p-3 border rounded-xl outline-none" /></div>
+                                    </div>
                                  </div>
                                )}
                             </div>
                           )}
 
+                          {/* TAB 3: PLAN */}
                           {detailSubTab === 'plan' && (
                             <div className="animate-in">
                               <div className="flex justify-between items-center mb-6"><h3 className="font-black text-xl text-slate-800">Lộ trình Hỗ trợ KPI</h3><button onClick={() => {setShowAddGoalForm(!showAddGoalForm); setEditingGoalId(null);}} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg">Thêm mục tiêu</button></div>
@@ -850,8 +1028,8 @@
                                       </div>
 
                                       {goal.activity && (
-                                        <div className="mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-700">
-                                          <strong className="text-slate-800">Hoạt động:</strong> {goal.activity}
+                                        <div className="mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-700 whitespace-pre-wrap">
+                                          <strong className="text-slate-800">Hoạt động:</strong><br/>{goal.activity}
                                         </div>
                                       )}
 
@@ -881,6 +1059,7 @@
                             </div>
                           )}
 
+                          {/* TAB 4: REFERRALS */}
                           {detailSubTab === 'referrals' && (
                             <div className="animate-in">
                                <h3 className="font-black text-xl mb-6">Nguồn lực Hỗ trợ (Referrals)</h3>
@@ -926,6 +1105,7 @@
                             </div>
                           )}
 
+                          {/* TAB 5: EVALUATION */}
                           {detailSubTab === 'evaluation' && (
                             <div className="animate-in">
                               <div className="flex justify-between items-center mb-8">
