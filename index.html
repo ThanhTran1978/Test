@@ -206,7 +206,7 @@
           const [editSwotData, setEditSwotData] = useState({ S: '', W: '', O: '', T: '' });
 
           const [showAddGoalForm, setShowAddGoalForm] = useState(false);
-          const [newGoalData, setNewGoalData] = useState({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm' });
+          const [newGoalData, setNewGoalData] = useState({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm', activity: '' });
           const [updatingGoalId, setUpdatingGoalId] = useState(null); 
           const [editingGoalId, setEditingGoalId] = useState(null); 
           const [editGoalData, setEditGoalData] = useState({});
@@ -307,9 +307,9 @@
 
           const handleSaveNewGoal = () => {
             if (!newGoalData.text.trim() || !newGoalData.deadline) { showAlert('Thiếu thông tin', 'Vui lòng nhập tên mục tiêu và ngày hạn.', 'error'); return; }
-            const newGoal = { id: Date.now(), text: newGoalData.text, status: 'Chưa bắt đầu', deadline: formatDateToVN(newGoalData.deadline), kpi: { baseline: Number(newGoalData.baseline), current: Number(newGoalData.baseline), target: Number(newGoalData.target), unit: newGoalData.unit, history: [{ date: new Date().toLocaleDateString('vi-VN'), value: Number(newGoalData.baseline) }] } };
+            const newGoal = { id: Date.now(), text: newGoalData.text, activity: newGoalData.activity, status: 'Chưa bắt đầu', deadline: formatDateToVN(newGoalData.deadline), kpi: { baseline: Number(newGoalData.baseline), current: Number(newGoalData.baseline), target: Number(newGoalData.target), unit: newGoalData.unit, history: [{ date: new Date().toLocaleDateString('vi-VN'), value: Number(newGoalData.baseline) }] } };
             updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: [...(selectedClient.details.goals||[]), newGoal] } });
-            setNewGoalData({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm' }); setShowAddGoalForm(false);
+            setNewGoalData({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm', activity: '' }); setShowAddGoalForm(false);
           };
 
           const handleDeleteGoal = (goalId) => showConfirm('Xác nhận xóa', 'Xóa mục tiêu can thiệp này?', () => updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: selectedClient.details.goals.filter(g => g.id !== goalId) } }));
@@ -317,7 +317,7 @@
           const startEditingGoal = (goal) => {
             setEditingGoalId(goal.id);
             setEditGoalData({
-                text: goal.text, deadline: parseDateStr(goal.deadline).toISOString().split('T')[0],
+                text: goal.text, activity: goal.activity || '', deadline: parseDateStr(goal.deadline).toISOString().split('T')[0],
                 baseline: goal.kpi.baseline, target: goal.kpi.target, unit: goal.kpi.unit
             });
           };
@@ -332,6 +332,7 @@
                     return {
                         ...g,
                         text: editGoalData.text,
+                        activity: editGoalData.activity,
                         deadline: formatDateToVN(editGoalData.deadline),
                         status: isComplete ? 'Hoàn thành' : (g.kpi.current !== newBase ? 'Đang tiến hành' : 'Chưa bắt đầu'),
                         kpi: { ...g.kpi, baseline: newBase, target: newTarget, unit: editGoalData.unit }
@@ -788,6 +789,7 @@
                                 <div className="mb-6 bg-white p-6 rounded-2xl border border-blue-200 shadow-xl">
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
                                     <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Nội dung Mục tiêu</label><input type="text" value={newGoalData.text} onChange={(e) => setNewGoalData({...newGoalData, text: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Hoạt động (Các bước thực hiện)</label><textarea rows="2" value={newGoalData.activity} onChange={(e) => setNewGoalData({...newGoalData, activity: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Đăng ký lớp học nghề, Tham vấn 1-1..."></textarea></div>
                                     <div><label className="block text-sm font-bold mb-1">Chỉ số gốc (Baseline)</label><input type="number" step="any" value={newGoalData.baseline} onChange={(e) => setNewGoalData({...newGoalData, baseline: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
                                     <div><label className="block text-sm font-bold mb-1">Chỉ số đích (Target)</label><input type="number" step="any" value={newGoalData.target} onChange={(e) => setNewGoalData({...newGoalData, target: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
                                     <div><label className="block text-sm font-bold mb-1">Đơn vị đo (Ví dụ: Lần, Điểm)</label><input type="text" value={newGoalData.unit} onChange={(e) => setNewGoalData({...newGoalData, unit: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
@@ -809,6 +811,7 @@
                                           <h4 className="font-bold text-blue-800 mb-4">Sửa cấu trúc Mục tiêu KPI</h4>
                                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                             <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 mb-1">Nội dung</label><input type="text" value={editGoalData.text} onChange={(e) => setEditGoalData({...editGoalData, text: e.target.value})} className="w-full p-2 border rounded" /></div>
+                                            <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 mb-1">Hoạt động (Các bước thực hiện)</label><textarea rows="2" value={editGoalData.activity} onChange={(e) => setEditGoalData({...editGoalData, activity: e.target.value})} className="w-full p-2 border rounded"></textarea></div>
                                             <div><label className="block text-xs font-bold text-slate-500 mb-1">Baseline (Gốc)</label><input type="number" step="any" value={editGoalData.baseline} onChange={(e) => setEditGoalData({...editGoalData, baseline: e.target.value})} className="w-full p-2 border rounded" /></div>
                                             <div><label className="block text-xs font-bold text-slate-500 mb-1">Target (Đích)</label><input type="number" step="any" value={editGoalData.target} onChange={(e) => setEditGoalData({...editGoalData, target: e.target.value})} className="w-full p-2 border rounded" /></div>
                                             <div><label className="block text-xs font-bold text-slate-500 mb-1">Đơn vị đo</label><input type="text" value={editGoalData.unit} onChange={(e) => setEditGoalData({...editGoalData, unit: e.target.value})} className="w-full p-2 border rounded" /></div>
@@ -823,7 +826,7 @@
                                     <div key={goal.id} className={`p-5 bg-white border rounded-xl shadow-sm ${warning ? warning.border : 'border-slate-200'}`}>
                                       <div className="flex justify-between gap-3 mb-4">
                                         <div className="flex items-center gap-3">
-                                          <div onClick={() => handleToggleGoalStatus(goal.id, goal.status)} className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${goal.status === 'Hoàn thành' ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>{goal.status === 'Hoàn thành' && <CheckCircle size={16} className="text-white" />}</div>
+                                          <div onClick={() => handleToggleGoalStatus(goal.id, goal.status)} className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer shrink-0 ${goal.status === 'Hoàn thành' ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>{goal.status === 'Hoàn thành' && <CheckCircle size={16} className="text-white" />}</div>
                                           <div>
                                             <span className={`font-bold text-lg ${goal.status === 'Hoàn thành' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{goal.text}</span>
                                             <div className="flex items-center gap-3 mt-1"><span className="text-xs font-bold text-slate-500">Hạn: {goal.deadline || 'Chưa xác định'}</span>{warning && (<span className={`text-[11px] font-bold px-2 py-0.5 rounded ${warning.color} ${warning.bg}`}>{warning.text}</span>)}</div>
@@ -834,6 +837,12 @@
                                             <button onClick={() => handleDeleteGoal(goal.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={18} /></button>
                                         </div>
                                       </div>
+
+                                      {goal.activity && (
+                                        <div className="mb-4 p-3 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-700">
+                                          <strong className="text-slate-800">Hoạt động:</strong> {goal.activity}
+                                        </div>
+                                      )}
 
                                       {goal.kpi && (
                                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center flex-wrap gap-4">
