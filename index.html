@@ -204,6 +204,7 @@
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null });
           const [clientFilter, setClientFilter] = useState('active'); 
+          const [searchQuery, setSearchQuery] = useState(''); // Thêm state cho thanh tìm kiếm
 
           const [selectedClient, setSelectedClient] = useState(null);
           const [detailSubTab, setDetailSubTab] = useState('info'); 
@@ -585,7 +586,28 @@
             setActiveTab('clients');
           };
 
-          const filteredClients = clients.filter(c => clientFilter === 'active' ? c.status !== 'Đã đóng ca' : c.status === 'Đã đóng ca');
+          // Lọc danh sách: Vừa lọc theo Trạng thái (Đang quản lý/Đóng ca), vừa lọc theo Từ khóa tìm kiếm
+          const filteredClients = clients.filter(c => {
+              const statusMatch = clientFilter === 'active' ? c.status !== 'Đã đóng ca' : c.status === 'Đã đóng ca';
+              const lowerQ = searchQuery.toLowerCase();
+              const searchMatch = !searchQuery || (
+                  (c.fullName || '').toLowerCase().includes(lowerQ) ||
+                  (c.alias || '').toLowerCase().includes(lowerQ) ||
+                  (c.id || '').toLowerCase().includes(lowerQ) ||
+                  (c.studentId || '').toLowerCase().includes(lowerQ) ||
+                  String(c.age || '').includes(lowerQ) ||
+                  (c.category || '').toLowerCase().includes(lowerQ) ||
+                  (c.disabilityStatus || '').toLowerCase().includes(lowerQ) ||
+                  (c.address || '').toLowerCase().includes(lowerQ) ||
+                  (c.phone || '').includes(lowerQ) ||
+                  (c.interventionLevel || '').toLowerCase().includes(lowerQ) ||
+                  (c.details?.family || '').toLowerCase().includes(lowerQ) ||
+                  (c.details?.needs || '').toLowerCase().includes(lowerQ) ||
+                  (c.details?.notes || '').toLowerCase().includes(lowerQ) ||
+                  (c.details?.problems || []).some(p => p.toLowerCase().includes(lowerQ))
+              );
+              return statusMatch && searchMatch;
+          });
 
           return (
             <div className="flex h-screen bg-slate-50 font-sans text-gray-800 relative">
@@ -661,7 +683,20 @@
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in">
                       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-wrap gap-4">
                         <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa (Tự động lưu Offline)</p></div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          
+                          {/* THANH TÌM KIẾM */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input 
+                              type="text" 
+                              placeholder="Tìm kiếm (Tên, Tuổi, MSSV, Vấn đề...)" 
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm outline-none w-64 lg:w-80 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            />
+                          </div>
+
                           <div className="flex bg-slate-100 p-1 rounded-lg">
                             <button onClick={() => setClientFilter('active')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'active' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Đang quản lý</button>
                             <button onClick={() => setClientFilter('closed')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'closed' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Đã đóng ca</button>
