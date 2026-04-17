@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USSH - Quản lý Ca CTXH</title>
+    <title>USSH HCM - Quản lý Ca CTXH</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -173,9 +173,10 @@
         function CaseManagementDemo() {
           const [activeTab, setActiveTab] = useState('dashboard');
           
-          // === LOCAL STORAGE INTEGRATION (TỰ ĐỘNG LƯU DỮ LIỆU) ===
+          // === LOCAL STORAGE INTEGRATION ===
           const [clients, setClients] = useState(() => {
-            const saved = localStorage.getItem('smartcase_clients_data');
+            // Đọc từ key mới hoặc key cũ để tránh mất dữ liệu của bạn
+            const saved = localStorage.getItem('ussh_hcm_clients_data') || localStorage.getItem('smartcase_clients_data');
             if (saved) {
                 try { return JSON.parse(saved); } 
                 catch(e) { return initialClients; }
@@ -184,23 +185,30 @@
           });
 
           useEffect(() => {
-              localStorage.setItem('smartcase_clients_data', JSON.stringify(clients));
+              localStorage.setItem('ussh_hcm_clients_data', JSON.stringify(clients));
           }, [clients]);
-          // ========================================================
+          // =================================
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null });
           const [clientFilter, setClientFilter] = useState('active'); 
 
           const [selectedClient, setSelectedClient] = useState(null);
           const [detailSubTab, setDetailSubTab] = useState('info'); 
+          
+          // States cho Chỉnh sửa Info
           const [isEditingInfo, setIsEditingInfo] = useState(false);
           const [editInfoData, setEditInfoData] = useState({});
+          
+          // States cho Chỉnh sửa SWOT
           const [isEditingSwot, setIsEditingSwot] = useState(false);
           const [editSwotData, setEditSwotData] = useState({ S: '', W: '', O: '', T: '' });
 
+          // States cho Mục tiêu (Goal / KPI)
           const [showAddGoalForm, setShowAddGoalForm] = useState(false);
           const [newGoalData, setNewGoalData] = useState({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm' });
-          const [updatingGoalId, setUpdatingGoalId] = useState(null);
+          const [updatingGoalId, setUpdatingGoalId] = useState(null); // Cập nhật KPI hiện tại
+          const [editingGoalId, setEditingGoalId] = useState(null); // Sửa cấu trúc mục tiêu (Baseline, Target)
+          const [editGoalData, setEditGoalData] = useState({});
           const [tempKpiValue, setTempKpiValue] = useState(0);
           const [tempKpiDate, setTempKpiDate] = useState(''); 
 
@@ -209,7 +217,7 @@
           const [newRefService, setNewRefService] = useState('');
           const [newRefStatus, setNewRefStatus] = useState('Đã kết nối');
 
-          const [newClient, setNewClient] = useState({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' });
+          const [newClient, setNewClient] = useState({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
           const [rawNotes, setRawNotes] = useState('');
           const [isExtractingInfo, setIsExtractingInfo] = useState(false);
           const [extractError, setExtractError] = useState('');
@@ -252,14 +260,15 @@
           };
 
           const updateClientInState = (updated) => { setClients(clients.map(c => c.id === updated.id ? updated : c)); setSelectedClient(updated); };
-          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); };
+          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null); };
           
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
           
-          // HÀM XÓA TOÀN BỘ DỮ LIỆU (RESET DEMO)
+          // XÓA TOÀN BỘ DỮ LIỆU
           const handleResetAllData = () => {
              showConfirm('CẢNH BÁO BẢO MẬT', 'Hành động này sẽ XÓA TOÀN BỘ HỒ SƠ khỏi hệ thống. Bạn có chắc chắn muốn làm mới bộ nhớ?', () => {
-                 localStorage.removeItem('smartcase_clients_data');
+                 localStorage.removeItem('ussh_hcm_clients_data');
+                 localStorage.removeItem('smartcase_clients_data'); // Dọn luôn bản cũ nếu có
                  setClients([]);
                  setSelectedClient(null);
                  setActiveTab('dashboard');
@@ -267,12 +276,15 @@
              });
           };
 
-          const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
-          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
+          // --- INFO EDIT LOGIC ---
+          const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, notes: selectedClient.details.notes || '', avatar: selectedClient.avatar }); setIsEditingInfo(true); };
+          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, notes: editInfoData.notes } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
 
+          // --- SWOT EDIT LOGIC ---
           const startEditingSwot = () => { setEditSwotData({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n') }); setIsEditingSwot(true); };
           const saveEditingSwot = () => { updateClientInState({ ...selectedClient, details: { ...selectedClient.details, swot: { S: editSwotData.S.split('\n').filter(i=>i.trim()), W: editSwotData.W.split('\n').filter(i=>i.trim()), O: editSwotData.O.split('\n').filter(i=>i.trim()), T: editSwotData.T.split('\n').filter(i=>i.trim()) } } }); setIsEditingSwot(false); showAlert('Thành công', 'Đã cập nhật SWOT!', 'success'); };
 
+          // --- GOALS EDIT LOGIC ---
           const handleToggleGoalStatus = (goalId, currentStatus) => {
             const newStatus = currentStatus === 'Hoàn thành' ? 'Đang tiến hành' : 'Hoàn thành';
             const updatedGoals = selectedClient.details.goals.map(g => {
@@ -290,8 +302,41 @@
             updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: [...(selectedClient.details.goals||[]), newGoal] } });
             setNewGoalData({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm' }); setShowAddGoalForm(false);
           };
+
           const handleDeleteGoal = (goalId) => showConfirm('Xác nhận xóa', 'Xóa mục tiêu can thiệp này?', () => updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: selectedClient.details.goals.filter(g => g.id !== goalId) } }));
 
+          // Bắt đầu sửa Mục tiêu (Baseline / Target)
+          const startEditingGoal = (goal) => {
+            setEditingGoalId(goal.id);
+            setEditGoalData({
+                text: goal.text, deadline: parseDateStr(goal.deadline).toISOString().split('T')[0], // Chuyển đổi để input date đọc được
+                baseline: goal.kpi.baseline, target: goal.kpi.target, unit: goal.kpi.unit
+            });
+          };
+
+          // Lưu Sửa Mục Tiêu
+          const saveEditingGoal = () => {
+            if (!editGoalData.text.trim() || !editGoalData.deadline) { showAlert('Lỗi', 'Không được để trống Tên và Ngày hạn', 'error'); return; }
+            const updatedGoals = selectedClient.details.goals.map(g => {
+                if (g.id === editingGoalId) {
+                    const newBase = Number(editGoalData.baseline);
+                    const newTarget = Number(editGoalData.target);
+                    const isComplete = (newBase < newTarget && g.kpi.current >= newTarget) || (newBase > newTarget && g.kpi.current <= newTarget);
+                    return {
+                        ...g,
+                        text: editGoalData.text,
+                        deadline: formatDateToVN(editGoalData.deadline),
+                        status: isComplete ? 'Hoàn thành' : (g.kpi.current !== newBase ? 'Đang tiến hành' : 'Chưa bắt đầu'),
+                        kpi: { ...g.kpi, baseline: newBase, target: newTarget, unit: editGoalData.unit }
+                    };
+                }
+                return g;
+            });
+            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: updatedGoals } });
+            setEditingGoalId(null);
+          };
+
+          // Cập nhật Điểm KPI Hiện tại
           const saveKpiUpdate = (goalId) => {
             if (!tempKpiDate) { showAlert('Lỗi', 'Vui lòng chọn ngày tháng.', 'error'); return; }
             const formattedDate = formatDateToVN(tempKpiDate);
@@ -309,6 +354,7 @@
             setUpdatingGoalId(null);
           };
 
+          // --- REFERRAL LOGIC ---
           const handleSaveNewReferral = () => {
             if (!newRefOrg.trim() || !newRefService.trim()) return;
             updateClientInState({ ...selectedClient, details: { ...selectedClient.details, referrals: [...(selectedClient.details.referrals||[]), { org: newRefOrg, service: newRefService, status: newRefStatus, date: new Date().toLocaleDateString('vi-VN'), icon: Building }] } });
@@ -329,9 +375,6 @@
             // Ví dụ: const apiKey = "AIzaSyCxxxxx...";
             const apiKey = ""; 
             
-            // 2. CƠ CHẾ CHUYỂN ĐỔI MODEL THÔNG MINH
-            // Trên Canvas không có API key -> dùng bản quyền preview 2.5
-            // Trên Vercel có API key cá nhân -> dùng bản quyền thương mại 1.5-flash để chống lỗi 404
             const modelName = apiKey ? "gemini-1.5-flash" : "gemini-2.5-flash-preview-09-2025";
             
             const prompt = `Bạn là Nhân viên CTXH chuyên nghiệp. Hãy phân tích báo cáo sau và xuất ra ĐÚNG ĐỊNH DẠNG JSON hợp lệ. Bắt buộc phải ẩn danh tên thật thành ký tự viết tắt.
@@ -349,7 +392,8 @@
               "swot_S": "Gạch đầu dòng điểm mạnh",
               "swot_W": "Gạch đầu dòng điểm yếu",
               "swot_O": "Gạch đầu dòng cơ hội",
-              "swot_T": "Gạch đầu dòng thách thức"
+              "swot_T": "Gạch đầu dòng thách thức",
+              "notes": "Ghi chú chuyên môn thêm (Nếu có)"
             }
             
             Văn bản cần phân tích: "${textToProcess}"`;
@@ -386,7 +430,7 @@
                   setExtractError('AI đã trả lời nhưng sai định dạng JSON. Bạn hãy điền thủ công.'); 
               }
             } catch (error) { 
-                setExtractError(`LỖI HỆ THỐNG MAU KÊU THẰNG THÀNH SỬA: ${error.message || 'Không thể kết nối AI.'}`); 
+                setExtractError(`LỖI HỆ THỐNG: ${error.message || 'Không thể kết nối AI.'}`); 
             } finally { 
                 setIsExtractingInfo(false); 
             }
@@ -442,9 +486,9 @@
             const processArr = (val) => Array.isArray(val) ? val : (val ? val.split('\n').filter(i=>i.trim()) : ['Chưa cập nhật']);
             setClients([{ 
               id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, alias: newClient.alias, age: newClient.age || 'N/A', category: newClient.category || 'Chưa phân loại', interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
-              details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
+              details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
-            setNewClient({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' }); setRawNotes(''); showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); setActiveTab('clients');
+            setNewClient({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); setRawNotes(''); showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); setActiveTab('clients');
           };
 
           const filteredClients = clients.filter(c => clientFilter === 'active' ? c.status !== 'Đã đóng ca' : c.status === 'Đã đóng ca');
@@ -490,7 +534,7 @@
               <div className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm shrink-0 z-10">
                   <h2 className="text-xl font-bold text-slate-800">{activeTab === 'dashboard' ? 'Bảng Điều Khiển' : activeTab === 'clients' ? 'Danh Sách Hồ Sơ Quản Lý' : activeTab === 'addClient' ? 'Phiếu Tiếp Nhận Đánh Giá Ban Đầu' : 'Chi tiết Hệ sinh thái Can thiệp'}</h2>
-                  <div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-sm font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-green-500"></div> Nó bảo mật lắm yên tâm</div></div>
+                  <div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-sm font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-green-500"></div> Mạng nội bộ bảo mật</div></div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50 hide-scrollbar">
@@ -523,10 +567,10 @@
                   {activeTab === 'clients' && (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in">
                       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-wrap gap-4">
-                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa (Demo chưa có tiền để có máy chủ lưu trữ)</p></div>
+                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa (Tự động lưu Offline)</p></div>
                         <div className="flex items-center gap-3">
                           <div className="flex bg-slate-100 p-1 rounded-lg">
-                            <button onClick={() => setClientFilter('active')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'active' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Đang can thiệp</button>
+                            <button onClick={() => setClientFilter('active')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'active' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Đang quản lý</button>
                             <button onClick={() => setClientFilter('closed')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'closed' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Đã đóng ca</button>
                           </div>
                           <button onClick={() => setActiveTab('addClient')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-bold text-sm"><PlusCircle size={16}/> Thêm Mới</button>
@@ -547,7 +591,7 @@
                                 <td className="p-4">{getInterventionBadge(client.interventionLevel)}</td>
                                 <td className="p-4 text-center">
                                   <div className="flex items-center justify-center gap-2">
-                                    <button onClick={() => navToClientDetail(client)} className={`px-4 py-2 rounded-lg font-bold text-sm flex-1 ${client.status === 'Đã đóng ca' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'}`}>{client.status === 'Đã đóng ca' ? 'Xem Lại' : 'Can thiệp'}</button>
+                                    <button onClick={() => navToClientDetail(client)} className={`px-4 py-2 rounded-lg font-bold text-sm flex-1 ${client.status === 'Đã đóng ca' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'}`}>{client.status === 'Đã đóng ca' ? 'Xem Lại' : 'Thông tin'}</button>
                                     <button onClick={() => handleDeleteClient(client.id)} className="p-2 text-slate-400 hover:text-red-600 rounded-lg"><Trash2 size={18} /></button>
                                   </div>
                                 </td>
@@ -601,7 +645,8 @@
                                 <div><label className="block text-sm font-bold mb-2">Độ tuổi</label><input type="number" value={newClient.age} onChange={(e) => setNewClient({...newClient, age: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Nhóm vấn đề</label><input type="text" value={newClient.category} onChange={(e) => setNewClient({...newClient, category: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Số điện thoại</label><input type="text" value={newClient.phone} onChange={(e) => setNewClient({...newClient, phone: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
-                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Hoàn cảnh</label><textarea rows={2} value={newClient.family} onChange={(e) => setNewClient({...newClient, family: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Hoàn cảnh gia đình</label><textarea rows={2} value={newClient.family} onChange={(e) => setNewClient({...newClient, family: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Ghi chú bổ sung (Nếu có)</label><textarea rows={2} value={newClient.notes} onChange={(e) => setNewClient({...newClient, notes: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Những lưu ý thêm trong quá trình tiếp xúc..." /></div>
                               </div>
                             </div>
                           </div>
@@ -648,7 +693,7 @@
                           {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Đánh giá SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => {
                             const IconComponent = tab.icon;
                             return (
-                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
+                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
                                 <IconComponent size={18} /> {tab.label}
                               </button>
                             );
@@ -667,7 +712,10 @@
                               {!isEditingInfo ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                   <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID:</strong> {selectedClient.id}</li><li><strong>Bí danh:</strong> {selectedClient.alias}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li></ul></div>
-                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family}</p></div>
+                                  <div className="space-y-6">
+                                    <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family || "Chưa có thông tin"}</p></div>
+                                    <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Ghi chú chuyên môn</h4><p className="text-slate-600 leading-relaxed bg-yellow-50 p-4 rounded-xl border border-yellow-100 whitespace-pre-wrap">{selectedClient.details?.notes || "Không có ghi chú."}</p></div>
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="flex flex-col sm:flex-row gap-6 bg-slate-50 p-6 rounded-2xl border border-blue-100">
@@ -683,6 +731,7 @@
                                     </div>
                                     <div><label className="block text-sm font-bold mb-1">Độ tuổi</label><input type="text" value={editInfoData.age} onChange={(e) => setEditInfoData({...editInfoData, age: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Gia đình</label><textarea rows={3} value={editInfoData.family} onChange={(e) => setEditInfoData({...editInfoData, family: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Ghi chú chuyên môn</label><textarea rows={3} value={editInfoData.notes} onChange={(e) => setEditInfoData({...editInfoData, notes: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Ghi chú thêm về ca này..." /></div>
                                   </div>
                                 </div>
                               )}
@@ -715,15 +764,18 @@
 
                           {detailSubTab === 'plan' && (
                             <div className="animate-in">
-                              <div className="flex justify-between items-center mb-6"><h3 className="font-black text-xl text-slate-800">Lộ trình Hỗ trợ KPI</h3><button onClick={() => setShowAddGoalForm(!showAddGoalForm)} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg">Thêm mục tiêu</button></div>
+                              <div className="flex justify-between items-center mb-6"><h3 className="font-black text-xl text-slate-800">Lộ trình Hỗ trợ KPI</h3><button onClick={() => {setShowAddGoalForm(!showAddGoalForm); setEditingGoalId(null);}} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg">Thêm mục tiêu</button></div>
 
                               {showAddGoalForm && (
                                 <div className="mb-6 bg-white p-6 rounded-2xl border border-blue-200 shadow-xl">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Nội dung</label><input type="text" value={newGoalData.text} onChange={(e) => setNewGoalData({...newGoalData, text: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
-                                    <div><label className="block text-sm font-bold mb-1">Ngày Hết Hạn</label><input type="date" value={newGoalData.deadline} onChange={(e) => setNewGoalData({...newGoalData, deadline: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+                                    <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Nội dung Mục tiêu</label><input type="text" value={newGoalData.text} onChange={(e) => setNewGoalData({...newGoalData, text: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Chỉ số gốc (Baseline)</label><input type="number" step="any" value={newGoalData.baseline} onChange={(e) => setNewGoalData({...newGoalData, baseline: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Chỉ số đích (Target)</label><input type="number" step="any" value={newGoalData.target} onChange={(e) => setNewGoalData({...newGoalData, target: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Đơn vị đo (Ví dụ: Lần, Điểm)</label><input type="text" value={newGoalData.unit} onChange={(e) => setNewGoalData({...newGoalData, unit: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Ngày Hết Hạn</label><input type="date" value={newGoalData.deadline} onChange={(e) => setNewGoalData({...newGoalData, deadline: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
                                   </div>
-                                  <div className="flex justify-end gap-3"><button onClick={() => setShowAddGoalForm(false)} className="px-5 py-2 bg-slate-100 rounded-lg font-bold">Hủy</button><button onClick={handleSaveNewGoal} className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold">Lưu</button></div>
+                                  <div className="flex justify-end gap-3"><button onClick={() => setShowAddGoalForm(false)} className="px-5 py-2 bg-slate-100 rounded-lg font-bold">Hủy</button><button onClick={handleSaveNewGoal} className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold">Lưu Mục Tiêu</button></div>
                                 </div>
                               )}
                               
@@ -731,6 +783,24 @@
                                 <div className="space-y-4">
                                   {selectedClient.details.goals.map(goal => {
                                     const warning = getGoalWarning(goal.deadline, goal.status);
+                                    const isEditingThisGoal = editingGoalId === goal.id;
+                                    
+                                    if (isEditingThisGoal) {
+                                      return (
+                                        <div key={goal.id} className="p-6 bg-blue-50 border border-blue-200 rounded-xl shadow-md">
+                                          <h4 className="font-bold text-blue-800 mb-4">Sửa cấu trúc Mục tiêu KPI</h4>
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                            <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 mb-1">Nội dung</label><input type="text" value={editGoalData.text} onChange={(e) => setEditGoalData({...editGoalData, text: e.target.value})} className="w-full p-2 border rounded" /></div>
+                                            <div><label className="block text-xs font-bold text-slate-500 mb-1">Baseline (Gốc)</label><input type="number" step="any" value={editGoalData.baseline} onChange={(e) => setEditGoalData({...editGoalData, baseline: e.target.value})} className="w-full p-2 border rounded" /></div>
+                                            <div><label className="block text-xs font-bold text-slate-500 mb-1">Target (Đích)</label><input type="number" step="any" value={editGoalData.target} onChange={(e) => setEditGoalData({...editGoalData, target: e.target.value})} className="w-full p-2 border rounded" /></div>
+                                            <div><label className="block text-xs font-bold text-slate-500 mb-1">Đơn vị đo</label><input type="text" value={editGoalData.unit} onChange={(e) => setEditGoalData({...editGoalData, unit: e.target.value})} className="w-full p-2 border rounded" /></div>
+                                            <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 mb-1">Ngày Hạn</label><input type="date" value={editGoalData.deadline} onChange={(e) => setEditGoalData({...editGoalData, deadline: e.target.value})} className="w-full p-2 border rounded" /></div>
+                                          </div>
+                                          <div className="flex justify-end gap-2"><button onClick={() => setEditingGoalId(null)} className="px-4 py-1.5 bg-white border text-slate-600 rounded font-bold text-sm">Hủy</button><button onClick={saveEditingGoal} className="px-4 py-1.5 bg-blue-600 text-white rounded font-bold text-sm">Lưu Thay Đổi</button></div>
+                                        </div>
+                                      );
+                                    }
+
                                     return (
                                     <div key={goal.id} className={`p-5 bg-white border rounded-xl shadow-sm ${warning ? warning.border : 'border-slate-200'}`}>
                                       <div className="flex justify-between gap-3 mb-4">
@@ -741,25 +811,28 @@
                                             <div className="flex items-center gap-3 mt-1"><span className="text-xs font-bold text-slate-500">Hạn: {goal.deadline || 'Chưa xác định'}</span>{warning && (<span className={`text-[11px] font-bold px-2 py-0.5 rounded ${warning.color} ${warning.bg}`}>{warning.text}</span>)}</div>
                                           </div>
                                         </div>
-                                        <button onClick={() => handleDeleteGoal(goal.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={18} /></button>
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => startEditingGoal(goal)} className="text-slate-400 hover:text-blue-600 p-2"><Edit3 size={18} /></button>
+                                            <button onClick={() => handleDeleteGoal(goal.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={18} /></button>
+                                        </div>
                                       </div>
 
                                       {goal.kpi && (
-                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center flex-wrap gap-4">
                                           <div className="flex items-center gap-4 text-sm font-medium">
                                             <div className="flex flex-col"><span className="text-xs text-slate-400">Baseline</span><span className="font-bold text-slate-700">{goal.kpi.baseline}</span></div><ArrowRight size={14} className="text-slate-300"/>
                                             <div className="flex flex-col"><span className="text-xs text-blue-500 font-bold">Hiện tại</span><span className="font-black text-blue-700 text-lg">{goal.kpi.current}</span></div><ArrowRight size={14} className="text-slate-300"/>
-                                            <div className="flex flex-col"><span className="text-xs text-slate-400">Đích</span><span className="font-bold text-emerald-600">{goal.kpi.target}</span></div>
+                                            <div className="flex flex-col"><span className="text-xs text-slate-400">Đích</span><span className="font-bold text-emerald-600">{goal.kpi.target} {goal.kpi.unit}</span></div>
                                           </div>
                                           
                                           {updatingGoalId === goal.id ? (
                                             <div className="flex gap-2">
-                                              <input type="date" value={tempKpiDate} onChange={e => setTempKpiDate(e.target.value)} className="p-1 border rounded" />
-                                              <input type="number" value={tempKpiValue} onChange={e => setTempKpiValue(e.target.value)} className="w-16 p-1 border rounded text-center" />
+                                              <input type="date" value={tempKpiDate} onChange={e => setTempKpiDate(e.target.value)} className="p-1 border rounded text-sm" />
+                                              <input type="number" step="any" value={tempKpiValue} onChange={e => setTempKpiValue(e.target.value)} className="w-16 p-1 border rounded text-center text-sm" />
                                               <button onClick={() => saveKpiUpdate(goal.id)} className="bg-blue-600 text-white p-1.5 rounded"><CheckCircle size={16}/></button>
                                             </div>
                                           ) : (
-                                            <button onClick={() => { setUpdatingGoalId(goal.id); setTempKpiValue(goal.kpi.current); const d = new Date(); setTempKpiDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100">Cập nhật Giai đoạn</button>
+                                            <button onClick={() => { setUpdatingGoalId(goal.id); setTempKpiValue(goal.kpi.current); const d = new Date(); setTempKpiDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100">Chấm điểm Giai đoạn</button>
                                           )}
                                         </div>
                                       )}
