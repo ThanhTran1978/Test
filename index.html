@@ -216,14 +216,13 @@
           const [showAddReferralForm, setShowAddReferralForm] = useState(false);
           const [newRefOrg, setNewRefOrg] = useState('');
           const [newRefService, setNewRefService] = useState('');
-          const [newRefCondition, setNewRefCondition] = useState(''); // Thêm Tình trạng nguồn lực
+          const [newRefCondition, setNewRefCondition] = useState(''); 
           const [newRefStatus, setNewRefStatus] = useState('Đã kết nối');
 
-          // Thêm Lượng giá Ghi chú
           const [isEditingEvalNote, setIsEditingEvalNote] = useState(false);
           const [evalNoteData, setEvalNoteData] = useState('');
 
-          const [newClient, setNewClient] = useState({ fullName: '', studentId: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
+          const [newClient, setNewClient] = useState({ fullName: '', studentId: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
           const [rawNotes, setRawNotes] = useState('');
           const [isExtractingInfo, setIsExtractingInfo] = useState(false);
           const [extractError, setExtractError] = useState('');
@@ -281,10 +280,10 @@
           };
 
           // --- INFO EDIT LOGIC ---
-          const startEditingInfo = () => { setEditInfoData({ fullName: selectedClient.fullName, studentId: selectedClient.studentId, age: selectedClient.age, category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, notes: selectedClient.details.notes || '', avatar: selectedClient.avatar }); setIsEditingInfo(true); };
+          const startEditingInfo = () => { setEditInfoData({ fullName: selectedClient.fullName, studentId: selectedClient.studentId, age: selectedClient.age, ethnicity: selectedClient.ethnicity || '', religion: selectedClient.religion || '', category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, needs: selectedClient.details.needs || '', notes: selectedClient.details.notes || '', avatar: selectedClient.avatar }); setIsEditingInfo(true); };
           const saveEditingInfo = () => { 
             const newAlias = getAliasFromName(editInfoData.fullName);
-            updateClientInState({ ...selectedClient, fullName: editInfoData.fullName, alias: newAlias, studentId: editInfoData.studentId, age: editInfoData.age, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, notes: editInfoData.notes } }); 
+            updateClientInState({ ...selectedClient, fullName: editInfoData.fullName, alias: newAlias, studentId: editInfoData.studentId, age: editInfoData.age, ethnicity: editInfoData.ethnicity, religion: editInfoData.religion, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, needs: editInfoData.needs, notes: editInfoData.notes } }); 
             setIsEditingInfo(false); 
             showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); 
           };
@@ -389,11 +388,14 @@
               "fullName": "Họ và tên thật của thân chủ",
               "studentId": "Mã số sinh viên (nếu có)",
               "age": "Số tuổi",
+              "ethnicity": "Dân tộc",
+              "religion": "Tôn giáo",
               "category": "Nhóm đối tượng chính (VD: Sinh viên khuyết tật vận động, Khó khăn tài chính)",
               "interventionLevel": "BẮT BUỘC CHỌN 1 TRONG 4 (Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi)",
               "phone": "Số điện thoại",
               "address": "Nơi ở hiện tại",
               "family": "Tóm tắt hoàn cảnh gia đình",
+              "needs": "Nhu cầu, mong muốn của thân chủ",
               "swot_S": "Gạch đầu dòng điểm mạnh",
               "swot_W": "Gạch đầu dòng điểm yếu",
               "swot_O": "Gạch đầu dòng cơ hội",
@@ -496,13 +498,15 @@
               alias: newAlias, 
               studentId: newClient.studentId,
               age: newClient.age || 'N/A', 
+              ethnicity: newClient.ethnicity || 'Không rõ',
+              religion: newClient.religion || 'Không rõ',
               category: newClient.category || 'Chưa phân loại', 
               interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', 
               lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
-              details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', evaluationNotes: '', goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
+              details: { family: newClient.family || 'Chưa thu thập', needs: newClient.needs || 'Chưa ghi nhận', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', evaluationNotes: '', goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
             
-            setNewClient({ fullName: '', studentId: '', alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); 
+            setNewClient({ fullName: '', studentId: '', alias: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); 
             setRawNotes(''); 
             showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); 
             setActiveTab('clients');
@@ -661,9 +665,12 @@
                                     </select>
                                 </div>
                                 <div><label className="block text-sm font-bold mb-2">Độ tuổi</label><input type="number" value={newClient.age} onChange={(e) => setNewClient({...newClient, age: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div><label className="block text-sm font-bold mb-2">Dân tộc</label><input type="text" value={newClient.ethnicity} onChange={(e) => setNewClient({...newClient, ethnicity: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="VD: Kinh" /></div>
+                                <div><label className="block text-sm font-bold mb-2">Tôn giáo</label><input type="text" value={newClient.religion} onChange={(e) => setNewClient({...newClient, religion: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="VD: Không" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Nhóm vấn đề</label><input type="text" value={newClient.category} onChange={(e) => setNewClient({...newClient, category: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Số điện thoại</label><input type="text" value={newClient.phone} onChange={(e) => setNewClient({...newClient, phone: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Hoàn cảnh gia đình</label><textarea rows={2} value={newClient.family} onChange={(e) => setNewClient({...newClient, family: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Nhu cầu, mong muốn của thân chủ</label><textarea rows={2} value={newClient.needs} onChange={(e) => setNewClient({...newClient, needs: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
                                 <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Ghi chú chuyên môn (Nếu có)</label><textarea rows={2} value={newClient.notes} onChange={(e) => setNewClient({...newClient, notes: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Những lưu ý thêm trong quá trình tiếp xúc..." /></div>
                               </div>
                             </div>
@@ -729,9 +736,10 @@
                               
                               {!isEditingInfo ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID Hệ thống:</strong> {selectedClient.id}</li><li><strong>Họ và tên đầy đủ:</strong> <span className="font-bold text-blue-700">{selectedClient.fullName || selectedClient.alias}</span></li><li><strong>Bí danh hiển thị ngoài:</strong> {selectedClient.alias}</li><li><strong>Mã số sinh viên:</strong> {selectedClient.studentId || 'Chưa cập nhật'}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li></ul></div>
+                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID Hệ thống:</strong> {selectedClient.id}</li><li><strong>Họ và tên đầy đủ:</strong> <span className="font-bold text-blue-700">{selectedClient.fullName || selectedClient.alias}</span></li><li><strong>Bí danh hiển thị ngoài:</strong> {selectedClient.alias}</li><li><strong>Mã số sinh viên:</strong> {selectedClient.studentId || 'Chưa cập nhật'}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Dân tộc:</strong> {selectedClient.ethnicity || 'Không rõ'}</li><li><strong>Tôn giáo:</strong> {selectedClient.religion || 'Không rõ'}</li><li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li></ul></div>
                                   <div className="space-y-6">
                                     <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family || "Chưa có thông tin"}</p></div>
+                                    <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhu cầu, mong muốn</h4><p className="text-slate-600 leading-relaxed bg-blue-50 p-4 rounded-xl border border-blue-100 whitespace-pre-wrap">{selectedClient.details?.needs || "Chưa ghi nhận."}</p></div>
                                     <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Ghi chú chuyên môn</h4><p className="text-slate-600 leading-relaxed bg-yellow-50 p-4 rounded-xl border border-yellow-100 whitespace-pre-wrap">{selectedClient.details?.notes || "Không có ghi chú."}</p></div>
                                   </div>
                                 </div>
@@ -749,7 +757,10 @@
                                         </select>
                                     </div>
                                     <div><label className="block text-sm font-bold mb-1">Độ tuổi</label><input type="text" value={editInfoData.age} onChange={(e) => setEditInfoData({...editInfoData, age: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Dân tộc</label><input type="text" value={editInfoData.ethnicity || ''} onChange={(e) => setEditInfoData({...editInfoData, ethnicity: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Kinh" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Tôn giáo</label><input type="text" value={editInfoData.religion || ''} onChange={(e) => setEditInfoData({...editInfoData, religion: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Không" /></div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Gia đình</label><textarea rows={3} value={editInfoData.family} onChange={(e) => setEditInfoData({...editInfoData, family: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Nhu cầu, mong muốn của thân chủ</label><textarea rows={3} value={editInfoData.needs} onChange={(e) => setEditInfoData({...editInfoData, needs: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Ghi chú chuyên môn</label><textarea rows={3} value={editInfoData.notes} onChange={(e) => setEditInfoData({...editInfoData, notes: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Ghi chú thêm về ca này..." /></div>
                                   </div>
                                 </div>
