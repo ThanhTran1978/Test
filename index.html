@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartCase VN - Quản lý Ca CTXH</title>
     
-    <!-- Bộ Bắt Lỗi Toàn Cục: Bắt lỗi và hiển thị thẳng lên màn hình thay vì màn hình trắng -->
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             document.body.innerHTML = `
                 <div style="padding: 40px; font-family: monospace; line-height: 1.6; background-color: #fef2f2; color: #991b1b; height: 100vh;">
                     <h2 style="color: #dc2626; border-bottom: 2px solid #fca5a5; padding-bottom: 10px;">⚠️ Ứng dụng gặp sự cố (Crash)</h2>
                     <p><b>Lỗi:</b> ${message}</p>
-                    <p><b>Nguồn:</b> ${source}</p>
                     <p><b>Dòng:</b> ${lineno} - <b>Cột:</b> ${colno}</p>
-                    <br/>
-                    <p><i>Hãy copy toàn bộ thông báo này gửi cho AI để sửa lỗi ngay lập tức!</i></p>
                 </div>
             `;
             return true;
@@ -25,7 +21,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Custom CSS cho thanh cuộn và hiệu ứng -->
+    <!-- Custom CSS -->
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -35,7 +31,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-in { animation: fadeInSlideUp 0.3s ease-out forwards; }
-        
         ::selection { background-color: #bfdbfe; color: #1e3a8a; }
     </style>
 
@@ -43,8 +38,8 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- Lucide Icons (Dùng bản minified) -->
-    <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+    <!-- Lucide Icons (Dùng bản 0.284.0 ổn định nhất) -->
+    <script src="https://unpkg.com/lucide-react@0.284.0/dist/umd/lucide-react.min.js"></script>
     
     <!-- Babel (Biên dịch JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -52,7 +47,7 @@
 <body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
     
     <div id="root">
-        <!-- Hiệu ứng tải trang trong lúc chờ Babel dịch code -->
+        <!-- Loader -->
         <div class="flex flex-col items-center justify-center h-screen bg-slate-50">
             <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             <p class="mt-4 text-slate-500 font-medium">Đang tải ứng dụng...</p>
@@ -60,7 +55,6 @@
     </div>
 
     <script type="text/babel">
-        // Bắt lỗi bên trong quá trình React render
         class ErrorBoundary extends React.Component {
             constructor(props) { super(props); this.state = { hasError: false, errorInfo: null }; }
             static getDerivedStateFromError(error) { return { hasError: true, errorInfo: error.toString() }; }
@@ -78,20 +72,57 @@
             }
         }
 
-        // 1. LẤY CÁC HÀM TỪ GLOBAL
         const { useState, useRef, useEffect } = React;
         
-        // SỬA LỖI Ở ĐÂY: Thư viện lucide-react trên CDN xuất biến toàn cục tên là `lucide`
-        const { 
-          LayoutDashboard, Users, FileText, AlertTriangle, Search, PlusCircle, 
-          CheckCircle, Clock, Sparkles, Loader2, Bot, FileInput, Save, X, UserCircle,
-          FolderOpen, ShieldAlert, Target, Network, TrendingUp, ChevronLeft, ArrowRight,
-          Activity, HeartHandshake, BriefcaseMedical, GraduationCap, Scale, FileSignature,
-          UploadCloud, FileType, Building, Trash2, Info, Edit3, CalendarClock, Timer, ListTodo, BellRing,
-          BarChart3, SlidersHorizontal, TrendingDown, RotateCcw, Camera
-        } = window.lucide || window.lucideReact || {};
+        // CƠ CHẾ SAFE ICON: Chống Crash Error 130 nếu Icon không tồn tại
+        const LR = window.lucideReact || {};
+        const safeIcon = (name) => LR[name] || ((props) => <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200" title={`Thiếu Icon: ${name}`} {...props}>!</span>);
 
-        // 2. CÁC HÀM HỖ TRỢ (DATE HELPERS)
+        const LayoutDashboard = safeIcon('LayoutDashboard');
+        const Users = safeIcon('Users');
+        const FileText = safeIcon('FileText');
+        const AlertTriangle = safeIcon('AlertTriangle');
+        const Search = safeIcon('Search');
+        const PlusCircle = safeIcon('PlusCircle');
+        const CheckCircle = safeIcon('CheckCircle');
+        const Clock = safeIcon('Clock');
+        const Sparkles = safeIcon('Sparkles');
+        const Loader2 = safeIcon('Loader2');
+        const Bot = safeIcon('Bot');
+        const FileInput = safeIcon('FileInput');
+        const Save = safeIcon('Save');
+        const X = safeIcon('X');
+        const UserCircle = safeIcon('UserCircle');
+        const FolderOpen = safeIcon('FolderOpen');
+        const ShieldAlert = safeIcon('ShieldAlert');
+        const Target = safeIcon('Target');
+        const Network = safeIcon('Network');
+        const TrendingUp = safeIcon('TrendingUp');
+        const ChevronLeft = safeIcon('ChevronLeft');
+        const ArrowRight = safeIcon('ArrowRight');
+        const Activity = safeIcon('Activity');
+        const HeartHandshake = safeIcon('HeartHandshake');
+        const BriefcaseMedical = safeIcon('BriefcaseMedical');
+        const GraduationCap = safeIcon('GraduationCap');
+        const Scale = safeIcon('Scale');
+        const FileSignature = safeIcon('FileSignature');
+        const UploadCloud = safeIcon('UploadCloud');
+        const FileType = safeIcon('FileType');
+        const Building = safeIcon('Building');
+        const Trash2 = safeIcon('Trash2');
+        const Info = safeIcon('Info');
+        const Edit3 = safeIcon('Edit3');
+        const CalendarClock = safeIcon('CalendarClock');
+        const Timer = safeIcon('Timer');
+        const ListTodo = safeIcon('ListTodo');
+        const BellRing = safeIcon('BellRing');
+        const BarChart3 = safeIcon('BarChart3');
+        const SlidersHorizontal = safeIcon('SlidersHorizontal');
+        const TrendingDown = safeIcon('TrendingDown');
+        const RotateCcw = safeIcon('RotateCcw');
+        const Camera = safeIcon('Camera');
+
+        // DATE HELPERS
         const today = new Date();
         const addDays = (days) => new Date(today.getTime() + days * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN');
         const formatDateToVN = (dateStr) => {
@@ -106,7 +137,7 @@
           return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
         };
 
-        // 3. COMPONENT: MINI LINE CHART
+        // MINI LINE CHART
         const MiniLineChart = ({ kpiData }) => {
           if (!kpiData || !kpiData.history || kpiData.history.length === 0) return null;
           const { history, target } = kpiData;
@@ -143,7 +174,7 @@
           );
         };
 
-        // 4. MOCK DATA
+        // MOCK DATA
         const initialClients = [
           { 
             id: 'TE-001', alias: 'L.T.H', age: 16, category: 'Bạo lực gia đình / Bỏ học', riskScore: 16, riskLevel: 'Khẩn cấp', lastVisit: addDays(-2), status: 'Đang can thiệp',
@@ -179,7 +210,7 @@
           }
         ];
 
-        // 5. MAIN COMPONENT
+        // MAIN COMPONENT
         function CaseManagementDemo() {
           const [activeTab, setActiveTab] = useState('dashboard');
           const [clients, setClients] = useState(initialClients);
@@ -247,7 +278,7 @@
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
 
           const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
-          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
+          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thôngত্তি!', 'success'); };
 
           const startEditingSwot = () => { setEditSwotData({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n') }); setIsEditingSwot(true); };
           const saveEditingSwot = () => { updateClientInState({ ...selectedClient, details: { ...selectedClient.details, swot: { S: editSwotData.S.split('\n').filter(i=>i.trim()), W: editSwotData.W.split('\n').filter(i=>i.trim()), O: editSwotData.O.split('\n').filter(i=>i.trim()), T: editSwotData.T.split('\n').filter(i=>i.trim()) } } }); setIsEditingSwot(false); showAlert('Thành công', 'Đã cập nhật SWOT!', 'success'); };
