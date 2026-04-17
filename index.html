@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USSH - Quản lý Ca CTXH</title>
+    <title>SmartCase VN - Quản lý Ca CTXH</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -172,7 +172,27 @@
         // 6. MAIN COMPONENT
         function CaseManagementDemo() {
           const [activeTab, setActiveTab] = useState('dashboard');
-          const [clients, setClients] = useState(initialClients);
+          
+          // === LOCAL STORAGE INTEGRATION (TỰ ĐỘNG LƯU DỮ LIỆU) ===
+          const [clients, setClients] = useState(() => {
+            const saved = localStorage.getItem('smartcase_clients_data');
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch(e) {
+                    console.error("Lỗi khi đọc dữ liệu đã lưu");
+                    return initialClients;
+                }
+            }
+            return initialClients;
+          });
+
+          // Tự động lưu vào trình duyệt mỗi khi biến `clients` thay đổi
+          useEffect(() => {
+              localStorage.setItem('smartcase_clients_data', JSON.stringify(clients));
+          }, [clients]);
+          // ========================================================
+
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null });
           const [clientFilter, setClientFilter] = useState('active'); 
 
@@ -238,7 +258,19 @@
 
           const updateClientInState = (updated) => { setClients(clients.map(c => c.id === updated.id ? updated : c)); setSelectedClient(updated); };
           const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); };
+          
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
+          
+          // HÀM XÓA TOÀN BỘ DỮ LIỆU (RESET DEMO)
+          const handleResetAllData = () => {
+             showConfirm('CẢNH BÁO BẢO MẬT', 'Hành động này sẽ XÓA TOÀN BỘ HỒ SƠ khỏi hệ thống. Bạn có chắc chắn muốn làm mới bộ nhớ?', () => {
+                 localStorage.removeItem('smartcase_clients_data');
+                 setClients([]);
+                 setSelectedClient(null);
+                 setActiveTab('dashboard');
+                 showAlert('Thành công', 'Đã xóa toàn bộ dữ liệu trên thiết bị này.', 'success');
+             });
+          };
 
           const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
           const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
@@ -387,12 +419,19 @@
               )}
 
               <div className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-20 shrink-0">
-                <div className="p-6"><h1 className="text-2xl font-black text-blue-400">USSH<span className="text-white">HCM</span></h1><p className="text-xs text-slate-400 mt-1">Hệ thống Quản lý Ca</p></div>
+                <div className="p-6"><h1 className="text-2xl font-black text-blue-400">SmartCase<span className="text-white">VN</span></h1><p className="text-xs text-slate-400 mt-1">Hệ thống Quản lý Ca</p></div>
                 <nav className="flex-1 px-4 space-y-2 mt-4">
                   <button onClick={() => {setActiveTab('dashboard'); setSelectedClient(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}><LayoutDashboard size={20} /> Tổng quan</button>
                   <button onClick={() => {setActiveTab('clients'); setSelectedClient(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${activeTab === 'clients' || activeTab === 'clientDetail' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}><Users size={20} /> Hồ sơ Thân chủ</button>
                   <button onClick={() => {setActiveTab('addClient'); setSelectedClient(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${activeTab === 'addClient' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}><FileSignature size={20} /> Phiếu Tiếp nhận</button>
                 </nav>
+                
+                {/* NÚT XÓA TOÀN BỘ DỮ LIỆU ĐỂ DEMO */}
+                <div className="p-4 mt-auto border-t border-slate-800">
+                    <button onClick={handleResetAllData} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-slate-400 hover:bg-red-900/50 hover:text-red-400 rounded-lg text-xs font-bold transition-all">
+                        <Trash2 size={14} /> Xóa toàn bộ dữ liệu (Reset Demo)
+                    </button>
+                </div>
               </div>
 
               <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -431,7 +470,7 @@
                   {activeTab === 'clients' && (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in">
                       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-wrap gap-4">
-                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa</p></div>
+                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa (Tự động lưu Offline)</p></div>
                         <div className="flex items-center gap-3">
                           <div className="flex bg-slate-100 p-1 rounded-lg">
                             <button onClick={() => setClientFilter('active')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'active' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Đang can thiệp</button>
