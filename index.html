@@ -43,8 +43,8 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.js"></script>
+    <!-- Lucide Icons (Dùng bản minified) -->
+    <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
     
     <!-- Babel (Biên dịch JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -80,6 +80,8 @@
 
         // 1. LẤY CÁC HÀM TỪ GLOBAL
         const { useState, useRef, useEffect } = React;
+        
+        // SỬA LỖI Ở ĐÂY: Thư viện lucide-react trên CDN xuất biến toàn cục tên là `lucide`
         const { 
           LayoutDashboard, Users, FileText, AlertTriangle, Search, PlusCircle, 
           CheckCircle, Clock, Sparkles, Loader2, Bot, FileInput, Save, X, UserCircle,
@@ -87,7 +89,7 @@
           Activity, HeartHandshake, BriefcaseMedical, GraduationCap, Scale, FileSignature,
           UploadCloud, FileType, Building, Trash2, Info, Edit3, CalendarClock, Timer, ListTodo, BellRing,
           BarChart3, SlidersHorizontal, TrendingDown, RotateCcw, Camera
-        } = lucideReact;
+        } = window.lucide || window.lucideReact || {};
 
         // 2. CÁC HÀM HỖ TRỢ (DATE HELPERS)
         const today = new Date();
