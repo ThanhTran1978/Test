@@ -366,6 +366,13 @@
             setNewRefOrg(''); setNewRefService(''); setNewRefCondition(''); setNewRefStatus('Đã kết nối'); setShowAddReferralForm(false);
           };
           
+          const handleDeleteReferral = (index) => {
+            showConfirm('Xác nhận xóa', 'Bạn muốn xóa nguồn lực hỗ trợ này?', () => {
+              const updatedReferrals = selectedClient.details.referrals.filter((_, i) => i !== index);
+              updateClientInState({ ...selectedClient, details: { ...selectedClient.details, referrals: updatedReferrals } });
+            });
+          };
+          
           const handleCloseCase = () => showConfirm('Đóng ca', 'Hành động này sẽ lưu trữ hồ sơ.', () => { updateClientInState({ ...selectedClient, status: 'Đã đóng ca', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Tiến hành lượng giá cuối kỳ. Đóng ca.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã đóng ca!', 'success'); setActiveTab('clients'); });
           const handleReopenCase = () => showConfirm('Mở lại hồ sơ', 'Bạn muốn mở lại hồ sơ này?', () => { updateClientInState({ ...selectedClient, status: 'Đang can thiệp', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Hồ sơ được mở lại.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã mở lại hồ sơ!', 'success'); });
 
@@ -864,16 +871,32 @@
                                     <p className="font-medium text-slate-500">{ref.service}</p>
                                     {ref.condition && <p className="text-sm text-slate-600 mt-2">Tình trạng nguồn lực: <span className="font-semibold text-slate-800">{ref.condition}</span></p>}
                                   </div>
-                                  <div className="text-right"><span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{ref.status}</span><p className="text-xs text-slate-400 mt-1">{ref.date}</p></div>
+                                  <div className="flex flex-col justify-between items-end">
+                                    <div className="text-right">
+                                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${ref.status === 'Chưa phản hồi' || ref.status === 'Từ chối' ? 'bg-red-100 text-red-700' : ref.status === 'Đã kết nối' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{ref.status}</span>
+                                      <p className="text-xs text-slate-400 mt-2">{ref.date}</p>
+                                    </div>
+                                    <button onClick={() => handleDeleteReferral(idx)} className="text-slate-400 hover:text-red-500 mt-2 p-1"><Trash2 size={18} /></button>
+                                  </div>
                                 </div>
                                ))}
                                
                                {showAddReferralForm ? (
                                 <div className="bg-slate-50 p-6 rounded-2xl border border-indigo-200 mt-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div><label className="block text-sm font-bold mb-1">Tổ chức</label><input type="text" value={newRefOrg} onChange={(e)=>setNewRefOrg(e.target.value)} className="w-full p-2 border rounded-lg" /></div>
                                     <div><label className="block text-sm font-bold mb-1">Dịch vụ</label><input type="text" value={newRefService} onChange={(e)=>setNewRefService(e.target.value)} className="w-full p-2 border rounded-lg" /></div>
                                     <div><label className="block text-sm font-bold mb-1">Tình trạng nguồn lực</label><input type="text" value={newRefCondition} onChange={(e)=>setNewRefCondition(e.target.value)} className="w-full p-2 border rounded-lg" placeholder="VD: Đang có sẵn, Thiếu kinh phí..." /></div>
+                                    <div>
+                                      <label className="block text-sm font-bold mb-1">Trạng thái kết nối</label>
+                                      <select value={newRefStatus} onChange={(e)=>setNewRefStatus(e.target.value)} className="w-full p-2 border rounded-lg">
+                                        <option value="Đã kết nối">Đã kết nối</option>
+                                        <option value="Đang xử lý">Đang xử lý</option>
+                                        <option value="Chờ phản hồi">Chờ phản hồi</option>
+                                        <option value="Chưa phản hồi">Chưa phản hồi</option>
+                                        <option value="Từ chối">Từ chối</option>
+                                      </select>
+                                    </div>
                                   </div>
                                   <div className="flex justify-end gap-3"><button onClick={()=>setShowAddReferralForm(false)} className="px-5 py-2 font-bold bg-white border rounded-lg">Hủy</button><button onClick={handleSaveNewReferral} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-lg">Lưu</button></div>
                                 </div>
