@@ -337,7 +337,7 @@
               if (!response?.ok) throw new Error('Net failed');
               const data = await response.json();
               try { setNewClient(prev => ({ ...prev, ...JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}") })); } catch (e) { setExtractError('Lỗi định dạng JSON trả về.'); }
-            } catch (error) { setExtractError('Lỗi kết nối AI. Vui lòng kiểm tra API Key nếu bạn đang chạy trên Vercel.'); } finally { setIsExtractingInfo(false); }
+            } catch (error) { setExtractError('Lỗi kết nối AI. Vui lòng kiểm tra API Key.'); } finally { setIsExtractingInfo(false); }
           };
           const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung.'); return; } runGeminiExtraction(rawNotes); };
           
