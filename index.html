@@ -216,7 +216,12 @@
           const [showAddReferralForm, setShowAddReferralForm] = useState(false);
           const [newRefOrg, setNewRefOrg] = useState('');
           const [newRefService, setNewRefService] = useState('');
+          const [newRefCondition, setNewRefCondition] = useState(''); // Thêm Tình trạng nguồn lực
           const [newRefStatus, setNewRefStatus] = useState('Đã kết nối');
+
+          // Thêm Lượng giá Ghi chú
+          const [isEditingEvalNote, setIsEditingEvalNote] = useState(false);
+          const [evalNoteData, setEvalNoteData] = useState('');
 
           const [newClient, setNewClient] = useState({ fullName: '', studentId: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
           const [rawNotes, setRawNotes] = useState('');
@@ -261,7 +266,7 @@
           };
 
           const updateClientInState = (updated) => { setClients(clients.map(c => c.id === updated.id ? updated : c)); setSelectedClient(updated); };
-          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null); };
+          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null); setIsEditingEvalNote(false); };
           
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
           
@@ -357,8 +362,8 @@
 
           const handleSaveNewReferral = () => {
             if (!newRefOrg.trim() || !newRefService.trim()) return;
-            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, referrals: [...(selectedClient.details.referrals||[]), { org: newRefOrg, service: newRefService, status: newRefStatus, date: new Date().toLocaleDateString('vi-VN'), icon: Building }] } });
-            setNewRefOrg(''); setNewRefService(''); setNewRefStatus('Đã kết nối'); setShowAddReferralForm(false);
+            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, referrals: [...(selectedClient.details.referrals||[]), { org: newRefOrg, service: newRefService, condition: newRefCondition, status: newRefStatus, date: new Date().toLocaleDateString('vi-VN'), icon: Building }] } });
+            setNewRefOrg(''); setNewRefService(''); setNewRefCondition(''); setNewRefStatus('Đã kết nối'); setShowAddReferralForm(false);
           };
           
           const handleCloseCase = () => showConfirm('Đóng ca', 'Hành động này sẽ lưu trữ hồ sơ.', () => { updateClientInState({ ...selectedClient, status: 'Đã đóng ca', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Tiến hành lượng giá cuối kỳ. Đóng ca.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã đóng ca!', 'success'); setActiveTab('clients'); });
@@ -367,7 +372,7 @@
           // AI EXTRACTION
           const runGeminiExtraction = async (textToProcess) => {
             setIsExtractingInfo(true); setExtractError(''); 
-            const apiKey = ""; // <--- BẠN CẦN ĐIỀN API KEY VÀO ĐÂY KHI LÊN VERCEL
+            const apiKey = ""; 
             const modelName = apiKey ? "gemini-1.5-flash" : "gemini-2.5-flash-preview-09-2025";
             
             const prompt = `Bạn là Nhân viên CTXH chuyên nghiệp. Hãy phân tích báo cáo sau và xuất ra ĐÚNG ĐỊNH DẠNG JSON.
@@ -486,7 +491,7 @@
               category: newClient.category || 'Chưa phân loại', 
               interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', 
               lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
-              details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
+              details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', evaluationNotes: '', goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
             
             setNewClient({ fullName: '', studentId: '', alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); 
@@ -698,7 +703,7 @@
                           {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Đánh giá SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => {
                             const IconComponent = tab.icon;
                             return (
-                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
+                              <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); setEditingGoalId(null); setIsEditingEvalNote(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}>
                                 <IconComponent size={18} /> {tab.label}
                               </button>
                             );
@@ -854,16 +859,21 @@
                                <h3 className="font-black text-xl mb-6">Nguồn lực Hỗ trợ (Referrals)</h3>
                                {selectedClient.details?.referrals?.map((ref, idx) => (
                                 <div key={idx} className="flex justify-between p-5 bg-white border rounded-2xl shadow-sm mb-4">
-                                  <div><h4 className="font-bold text-lg">{ref.org}</h4><p className="font-medium text-slate-500">{ref.service}</p></div>
+                                  <div>
+                                    <h4 className="font-bold text-lg">{ref.org}</h4>
+                                    <p className="font-medium text-slate-500">{ref.service}</p>
+                                    {ref.condition && <p className="text-sm text-slate-600 mt-2">Tình trạng nguồn lực: <span className="font-semibold text-slate-800">{ref.condition}</span></p>}
+                                  </div>
                                   <div className="text-right"><span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{ref.status}</span><p className="text-xs text-slate-400 mt-1">{ref.date}</p></div>
                                 </div>
                                ))}
                                
                                {showAddReferralForm ? (
                                 <div className="bg-slate-50 p-6 rounded-2xl border border-indigo-200 mt-4">
-                                  <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                     <div><label className="block text-sm font-bold mb-1">Tổ chức</label><input type="text" value={newRefOrg} onChange={(e)=>setNewRefOrg(e.target.value)} className="w-full p-2 border rounded-lg" /></div>
                                     <div><label className="block text-sm font-bold mb-1">Dịch vụ</label><input type="text" value={newRefService} onChange={(e)=>setNewRefService(e.target.value)} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Tình trạng nguồn lực</label><input type="text" value={newRefCondition} onChange={(e)=>setNewRefCondition(e.target.value)} className="w-full p-2 border rounded-lg" placeholder="VD: Đang có sẵn, Thiếu kinh phí..." /></div>
                                   </div>
                                   <div className="flex justify-end gap-3"><button onClick={()=>setShowAddReferralForm(false)} className="px-5 py-2 font-bold bg-white border rounded-lg">Hủy</button><button onClick={handleSaveNewReferral} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-lg">Lưu</button></div>
                                 </div>
@@ -883,6 +893,8 @@
                                   <button onClick={handleReopenCase} className="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2"><RotateCcw size={18}/> Mở lại hồ sơ</button>
                                 )}
                               </div>
+                              
+                              {/* CÁC BIỂU ĐỒ */}
                               {selectedClient.details?.goals?.map(goal => (
                                 goal.kpi?.history?.length > 0 && (
                                   <div key={goal.id} className="bg-white border rounded-2xl p-6 shadow-sm mb-6">
@@ -891,6 +903,31 @@
                                   </div>
                                 )
                               ))}
+
+                              {/* GHI CHÚ LƯỢNG GIÁ TỔNG QUÁT */}
+                              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mt-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2"><FileSignature size={20} className="text-emerald-600"/> Ghi chú chuyên môn lượng giá</h4>
+                                    {!isEditingEvalNote ? (
+                                        <button onClick={() => { setEvalNoteData(selectedClient.details.evaluationNotes || ''); setIsEditingEvalNote(true); }} className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100">Chỉnh sửa ghi chú</button>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setIsEditingEvalNote(false)} className="text-sm font-bold text-slate-600 bg-slate-100 px-4 py-2 rounded-lg hover:bg-slate-200">Hủy</button>
+                                            <button onClick={() => {
+                                                updateClientInState({ ...selectedClient, details: { ...selectedClient.details, evaluationNotes: evalNoteData } });
+                                                setIsEditingEvalNote(false);
+                                                showAlert('Thành công', 'Đã lưu ghi chú lượng giá.', 'success');
+                                            }} className="text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700">Lưu Ghi Chú</button>
+                                        </div>
+                                    )}
+                                </div>
+                                {!isEditingEvalNote ? (
+                                    <p className="text-slate-600 whitespace-pre-wrap leading-relaxed p-4 bg-slate-50 rounded-xl border border-slate-100">{selectedClient.details.evaluationNotes || 'Chưa có ghi chú lượng giá tổng kết.'}</p>
+                                ) : (
+                                    <textarea rows={5} value={evalNoteData} onChange={e => setEvalNoteData(e.target.value)} className="w-full p-4 border rounded-xl outline-none" placeholder="Nhập nhận xét về sự tiến bộ, điểm cần khắc phục của sinh viên sau quá trình hỗ trợ..."></textarea>
+                                )}
+                              </div>
+
                             </div>
                           )}
                         </div>
