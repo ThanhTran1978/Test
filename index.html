@@ -327,7 +327,7 @@
             
             // 1. BẠN PHẢI DÁN API KEY CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP NÀY ĐỂ CHẠY TRÊN VERCEL!
             // Ví dụ: const apiKey = "AIzaSyCxxxxx...";
-            const apiKey = "AQ.Ab8RN6Kwu4tv7oficjKZnHSCE5VsO4VxJAQnHx9G4EGRH0eL4A"; 
+            const apiKey = ""; 
             
             // 2. CƠ CHẾ CHUYỂN ĐỔI MODEL THÔNG MINH
             // Trên Canvas không có API key -> dùng bản quyền preview 2.5
@@ -490,7 +490,7 @@
               <div className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm shrink-0 z-10">
                   <h2 className="text-xl font-bold text-slate-800">{activeTab === 'dashboard' ? 'Bảng Điều Khiển' : activeTab === 'clients' ? 'Danh Sách Hồ Sơ Quản Lý' : activeTab === 'addClient' ? 'Phiếu Tiếp Nhận Đánh Giá Ban Đầu' : 'Chi tiết Hệ sinh thái Can thiệp'}</h2>
-                  <div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-sm font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-green-500"></div> Mạng nội bộ bảo mật</div></div>
+                  <div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-sm font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-green-500"></div> Nó bảo mật lắm yên tâm</div></div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50 hide-scrollbar">
@@ -523,7 +523,7 @@
                   {activeTab === 'clients' && (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in">
                       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-wrap gap-4">
-                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa (Tự động lưu Offline)</p></div>
+                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa (Demo chưa có tiền để có máy chủ lưu trữ :<)</p></div>
                         <div className="flex items-center gap-3">
                           <div className="flex bg-slate-100 p-1 rounded-lg">
                             <button onClick={() => setClientFilter('active')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'active' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Đang can thiệp</button>
