@@ -5,21 +5,635 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartCase VN - Quản lý Ca CTXH</title>
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <link rel="stylesheet" href="style.css">
+    <!-- Custom CSS cho thanh cuộn và hiệu ứng -->
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes fadeInSlideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInSlideUp 0.3s ease-out forwards; }
+        
+        ::selection { background-color: #bfdbfe; color: #1e3a8a; }
+    </style>
 
+    <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.js"></script>
     
+    <!-- Babel (Biên dịch JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased">
+<body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
     
     <div id="root"></div>
 
-    <script type="text/babel" src="script.js"></script>
+    <script type="text/babel">
+        // 1. LẤY CÁC HÀM TỪ GLOBAL (Thay cho import)
+        const { useState, useRef, useEffect } = React;
+        const { 
+          LayoutDashboard, Users, FileText, AlertTriangle, Search, PlusCircle, 
+          CheckCircle, Clock, Sparkles, Loader2, Bot, FileInput, Save, X, UserCircle,
+          FolderOpen, ShieldAlert, Target, Network, TrendingUp, ChevronLeft, ArrowRight,
+          Activity, HeartHandshake, BriefcaseMedical, GraduationCap, Scale, FileSignature,
+          UploadCloud, FileType, Building, Trash2, Info, Edit3, CalendarClock, Timer, ListTodo, BellRing,
+          BarChart3, SlidersHorizontal, TrendingDown, RotateCcw, Camera
+        } = lucideReact;
+
+        // 2. CÁC HÀM HỖ TRỢ (DATE HELPERS)
+        const today = new Date();
+        const addDays = (days) => new Date(today.getTime() + days * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN');
+        const formatDateToVN = (dateStr) => {
+          if (!dateStr) return '';
+          const [year, month, day] = dateStr.split('-');
+          return `${day}/${month}/${year}`;
+        };
+        const parseDateStr = (dateStr) => {
+          if (!dateStr) return new Date();
+          const parts = dateStr.split('/');
+          if (parts.length !== 3) return new Date();
+          return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+        };
+
+        // 3. COMPONENT: MINI LINE CHART
+        const MiniLineChart = ({ kpiData }) => {
+          if (!kpiData || !kpiData.history || kpiData.history.length === 0) return null;
+          const { history, target } = kpiData;
+          const values = history.map(d => d.value);
+          const maxVal = Math.max(...values, target);
+          const minVal = Math.min(...values, target, 0);
+          const range = maxVal - minVal || 1;
+
+          const width = 600, height = 180, paddingX = 40, paddingY = 30;
+          const getX = (index) => paddingX + (index * (width - 2 * paddingX) / Math.max(1, history.length - 1));
+          const getY = (val) => height - paddingY - ((val - minVal) / range) * (height - 2 * paddingY);
+
+          const points = history.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
+          const targetY = getY(target);
+
+          return (
+            <div className="w-full overflow-x-auto pb-4">
+              <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full min-w-[400px] overflow-visible drop-shadow-sm">
+                <line x1={paddingX} y1={getY(maxVal)} x2={width - paddingX} y2={getY(maxVal)} stroke="#f1f5f9" strokeWidth="1" />
+                <line x1={paddingX} y1={getY((maxVal + minVal)/2)} x2={width - paddingX} y2={getY((maxVal + minVal)/2)} stroke="#f1f5f9" strokeWidth="1" />
+                <line x1={paddingX} y1={getY(minVal)} x2={width - paddingX} y2={getY(minVal)} stroke="#e2e8f0" strokeWidth="2" />
+                <line x1={paddingX} y1={targetY} x2={width - paddingX} y2={targetY} stroke="#10b981" strokeWidth="2" strokeDasharray="5,5" />
+                <text x={width - paddingX + 5} y={targetY + 4} fill="#10b981" fontSize="12" fontWeight="bold">Đích: {target}</text>
+                {history.length > 1 && <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+                {history.map((d, i) => (
+                  <g key={i}>
+                    <circle cx={getX(i)} cy={getY(d.value)} r="5" fill="#ffffff" stroke="#3b82f6" strokeWidth="2" className="hover:r-6 hover:fill-blue-100 transition-all cursor-pointer"><title>Ngày chấm: {d.date}&#10;Chỉ số: {d.value}</title></circle>
+                    <text x={getX(i)} y={getY(d.value) - 12} fill="#1e293b" fontSize="12" fontWeight="bold" textAnchor="middle">{d.value}</text>
+                    <text x={getX(i)} y={height - 10} fill="#64748b" fontSize="10" textAnchor="middle">{d.date.substring(0,5)}</text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+          );
+        };
+
+        // 4. MOCK DATA
+        const initialClients = [
+          { 
+            id: 'TE-001', alias: 'L.T.H', age: 16, category: 'Bạo lực gia đình / Bỏ học', riskScore: 16, riskLevel: 'Khẩn cấp', lastVisit: addDays(-2), status: 'Đang can thiệp',
+            phone: '090xxxxxxx', address: 'Quận 4, TP.HCM', avatar: null,
+            details: {
+              family: 'Sống với bà ngoại (70 tuổi, yếu). Mẹ đơn thân đi làm xa. Dượng ruột hay say xỉn bạo hành.', history: 'Từng nhập viện do chấn thương phần mềm năm 2025.',
+              swot: {
+                S: ['Rất thương bà ngoại', 'Có năng khiếu vẽ', 'Mong muốn tự lập'], W: ['Suy dinh dưỡng nhẹ', 'Tâm lý lo âu', 'Kỹ năng đối phó kém'],
+                O: ['Chính quyền quan tâm', 'Có lớp học nghề miễn phí'], T: ['Dượng ruột đe dọa', 'Nguy cơ tệ nạn']
+              },
+              goals: [
+                { 
+                  id: 1, text: 'Kiểm soát hoảng loạn tâm lý', status: 'Đang tiến hành', deadline: addDays(10), 
+                  kpi: { baseline: 8, current: 3, target: 1, unit: 'Cơn/Tuần', history: [{ date: addDays(-20), value: 8 }, { date: addDays(-15), value: 5 }, { date: addDays(-10), value: 6 }, { date: addDays(-2), value: 3 }] } 
+                },
+                { 
+                  id: 2, text: 'Tham vấn trị liệu tâm lý', status: 'Đang tiến hành', deadline: addDays(2), 
+                  kpi: { baseline: 0, current: 3, target: 5, unit: 'Buổi', history: [{ date: addDays(-15), value: 0 }, { date: addDays(-10), value: 1 }, { date: addDays(-5), value: 2 }, { date: addDays(-2), value: 3 }] } 
+                }
+              ],
+              referrals: [{ org: 'Hội LHPN Quận 4', service: 'Hỗ trợ pháp lý / Cách ly', status: 'Đã kết nối', date: addDays(-7), icon: Scale }],
+              timeline: [{ date: addDays(-2), event: 'Lượng giá: Thân chủ có tiến bộ trong việc kiểm soát hoảng loạn.' }]
+            }
+          },
+          { 
+            id: 'PN-042', alias: 'T.T.B', age: 35, category: 'Mẹ đơn thân/Nghèo', riskScore: 8, riskLevel: 'Trung bình', lastVisit: addDays(-10), status: 'Theo dõi',
+            phone: '098xxxxxxx', address: 'Quận 8, TP.HCM', avatar: null,
+            details: { 
+              family: 'Nuôi 2 con nhỏ. Chồng ly hôn.', history: 'Khỏe mạnh.', swot: { S: ['Chăm chỉ'], W: ['Học vấn thấp'], O: ['Vay vốn'], T: ['Lạm phát'] },
+              goals: [{ id: 4, text: 'Tăng thu nhập', status: 'Đang tiến hành', deadline: addDays(-1), kpi: { baseline: 3, current: 4, target: 6, unit: 'Triệu', history: [{date: addDays(-30), value: 3}, {date: addDays(-10), value: 4}] } }], 
+              referrals: [], timeline: [] 
+            }
+          }
+        ];
+
+        // 5. MAIN COMPONENT
+        function CaseManagementDemo() {
+          const [activeTab, setActiveTab] = useState('dashboard');
+          const [clients, setClients] = useState(initialClients);
+          const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null });
+          const [clientFilter, setClientFilter] = useState('active'); 
+
+          const [selectedClient, setSelectedClient] = useState(null);
+          const [detailSubTab, setDetailSubTab] = useState('info'); 
+          const [isEditingInfo, setIsEditingInfo] = useState(false);
+          const [editInfoData, setEditInfoData] = useState({});
+          const [isEditingSwot, setIsEditingSwot] = useState(false);
+          const [editSwotData, setEditSwotData] = useState({ S: '', W: '', O: '', T: '' });
+
+          const [showAddGoalForm, setShowAddGoalForm] = useState(false);
+          const [newGoalData, setNewGoalData] = useState({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm' });
+          const [updatingGoalId, setUpdatingGoalId] = useState(null);
+          const [tempKpiValue, setTempKpiValue] = useState(0);
+          const [tempKpiDate, setTempKpiDate] = useState(''); 
+
+          const [showAddReferralForm, setShowAddReferralForm] = useState(false);
+          const [newRefOrg, setNewRefOrg] = useState('');
+          const [newRefService, setNewRefService] = useState('');
+          const [newRefStatus, setNewRefStatus] = useState('Đã kết nối');
+
+          const [newClient, setNewClient] = useState({ alias: '', age: '', category: '', phone: '', address: '', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' });
+          const [rawNotes, setRawNotes] = useState('');
+          const [isExtractingInfo, setIsExtractingInfo] = useState(false);
+          const [extractError, setExtractError] = useState('');
+          const fileInputRef = useRef(null);
+
+          const showAlert = (title, message, type = 'info') => setModalConfig({ isOpen: true, title, message, type, onConfirm: () => setModalConfig(prev => ({...prev, isOpen: false})), onCancel: null });
+          const showConfirm = (title, message, onConfirmAction) => setModalConfig({ isOpen: true, title, message, type: 'confirm', onConfirm: () => { onConfirmAction(); setModalConfig(prev => ({...prev, isOpen: false})); }, onCancel: () => setModalConfig(prev => ({...prev, isOpen: false})) });
+
+          const handleAvatarUpload = (e, stateSetter, currentState) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => { stateSetter({ ...currentState, avatar: event.target.result }); };
+            reader.readAsDataURL(file);
+          };
+
+          const getGoalWarning = (deadlineStr, status) => {
+            if (status === 'Hoàn thành' || !deadlineStr) return null;
+            const dDate = parseDateStr(deadlineStr);
+            const currentDate = new Date();
+            dDate.setHours(0,0,0,0); currentDate.setHours(0,0,0,0);
+            const diffDays = Math.ceil((dDate - currentDate) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) return { text: `Quá hạn ${Math.abs(diffDays)} ngày`, color: 'text-red-600', bg: 'bg-red-100', border: 'border-red-200' };
+            if (diffDays === 0) return { text: `Hết hạn hôm nay`, color: 'text-amber-600', bg: 'bg-amber-100', border: 'border-amber-200' };
+            if (diffDays <= 7) return { text: `Còn ${diffDays} ngày`, color: 'text-amber-600', bg: 'bg-amber-100', border: 'border-amber-200' };
+            return null;
+          };
+          
+          const systemWarnings = clients.flatMap(c => c.status !== 'Đã đóng ca' ? (c.details?.goals || []).map(g => ({ client: c, goal: g, warn: getGoalWarning(g.deadline, g.status) })).filter(w => w.warn) : []);
+          
+          const getRiskBadge = (level) => {
+            if(level === 'Khẩn cấp') return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><AlertTriangle size={12}/> Khẩn cấp</span>;
+            if(level === 'Trung bình') return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><Clock size={12}/> Trung bình</span>;
+            return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><CheckCircle size={12}/> Thấp</span>;
+          };
+
+          const updateClientInState = (updated) => { setClients(clients.map(c => c.id === updated.id ? updated : c)); setSelectedClient(updated); };
+          const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); };
+          const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
+
+          const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
+          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
+
+          const startEditingSwot = () => { setEditSwotData({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n') }); setIsEditingSwot(true); };
+          const saveEditingSwot = () => { updateClientInState({ ...selectedClient, details: { ...selectedClient.details, swot: { S: editSwotData.S.split('\n').filter(i=>i.trim()), W: editSwotData.W.split('\n').filter(i=>i.trim()), O: editSwotData.O.split('\n').filter(i=>i.trim()), T: editSwotData.T.split('\n').filter(i=>i.trim()) } } }); setIsEditingSwot(false); showAlert('Thành công', 'Đã cập nhật SWOT!', 'success'); };
+
+          const handleToggleGoalStatus = (goalId, currentStatus) => {
+            const newStatus = currentStatus === 'Hoàn thành' ? 'Đang tiến hành' : 'Hoàn thành';
+            const updatedGoals = selectedClient.details.goals.map(g => {
+              if (g.id !== goalId) return g;
+              let kpi = { ...g.kpi };
+              if (newStatus === 'Hoàn thành' && g.kpi) { kpi.current = g.kpi.target; kpi.history = [...(kpi.history||[]), { date: new Date().toLocaleDateString('vi-VN'), value: g.kpi.target }]; kpi.history.sort((a, b) => parseDateStr(a.date) - parseDateStr(b.date)); }
+              return { ...g, status: newStatus, kpi };
+            });
+            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: updatedGoals } });
+          };
+
+          const handleSaveNewGoal = () => {
+            if (!newGoalData.text.trim() || !newGoalData.deadline) { showAlert('Thiếu thông tin', 'Vui lòng nhập tên mục tiêu và ngày hạn.', 'error'); return; }
+            const newGoal = { id: Date.now(), text: newGoalData.text, status: 'Chưa bắt đầu', deadline: formatDateToVN(newGoalData.deadline), kpi: { baseline: Number(newGoalData.baseline), current: Number(newGoalData.baseline), target: Number(newGoalData.target), unit: newGoalData.unit, history: [{ date: new Date().toLocaleDateString('vi-VN'), value: Number(newGoalData.baseline) }] } };
+            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: [...(selectedClient.details.goals||[]), newGoal] } });
+            setNewGoalData({ text: '', deadline: '', baseline: 0, target: 10, unit: 'Điểm' }); setShowAddGoalForm(false);
+          };
+          const handleDeleteGoal = (goalId) => showConfirm('Xác nhận xóa', 'Xóa mục tiêu can thiệp này?', () => updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: selectedClient.details.goals.filter(g => g.id !== goalId) } }));
+
+          const saveKpiUpdate = (goalId) => {
+            if (!tempKpiDate) { showAlert('Lỗi', 'Vui lòng chọn ngày tháng.', 'error'); return; }
+            const formattedDate = formatDateToVN(tempKpiDate);
+            const newCurrent = Number(tempKpiValue);
+            const updatedGoals = selectedClient.details.goals.map(g => {
+              if (g.id !== goalId) return g;
+              const hist = [...(g.kpi.history || [])];
+              const existingIndex = hist.findIndex(h => h.date === formattedDate);
+              if (existingIndex >= 0) hist[existingIndex].value = newCurrent; else hist.push({ date: formattedDate, value: newCurrent });
+              hist.sort((a, b) => parseDateStr(a.date) - parseDateStr(b.date));
+              const isComplete = (g.kpi.baseline < g.kpi.target && newCurrent >= g.kpi.target) || (g.kpi.baseline > g.kpi.target && newCurrent <= g.kpi.target);
+              return { ...g, status: isComplete ? 'Hoàn thành' : (newCurrent !== g.kpi.baseline ? 'Đang tiến hành' : 'Chưa bắt đầu'), kpi: { ...g.kpi, current: newCurrent, history: hist } };
+            });
+            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, goals: updatedGoals, timeline: [{ date: formattedDate, event: `Cập nhật điểm KPI mục tiêu: ${selectedClient.details.goals.find(g=>g.id===goalId).text} -> ${tempKpiValue}` }, ...(selectedClient.details.timeline||[])] } });
+            setUpdatingGoalId(null);
+          };
+
+          const handleSaveNewReferral = () => {
+            if (!newRefOrg.trim() || !newRefService.trim()) return;
+            updateClientInState({ ...selectedClient, details: { ...selectedClient.details, referrals: [...(selectedClient.details.referrals||[]), { org: newRefOrg, service: newRefService, status: newRefStatus, date: new Date().toLocaleDateString('vi-VN'), icon: Building }] } });
+            setNewRefOrg(''); setNewRefService(''); setNewRefStatus('Đã kết nối'); setShowAddReferralForm(false);
+          };
+          
+          const handleCloseCase = () => showConfirm('Đóng ca', 'Hành động này sẽ lưu trữ hồ sơ.', () => { updateClientInState({ ...selectedClient, status: 'Đã đóng ca', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Tiến hành lượng giá cuối kỳ. Đóng ca.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã đóng ca!', 'success'); setActiveTab('clients'); });
+          const handleReopenCase = () => showConfirm('Mở lại hồ sơ', 'Bạn muốn mở lại hồ sơ này?', () => { updateClientInState({ ...selectedClient, status: 'Đang can thiệp', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Hồ sơ được mở lại.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã mở lại hồ sơ!', 'success'); });
+
+          const runGeminiExtraction = async (textToProcess) => {
+            setIsExtractingInfo(true); setExtractError(''); const apiKey = ""; 
+            const prompt = `NVCTXH. Phân tích SWOT JSON. Ẩn danh. {alias, age, category, phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
+            try {
+              let response; let retries = 0; const delays = [1000, 2000, 4000];
+              while (retries < 3) {
+                try { response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }) }); if (response.ok) break; } catch (e) {}
+                await new Promise(res => setTimeout(res, delays[retries])); retries++;
+              }
+              if (!response?.ok) throw new Error('Net failed');
+              const data = await response.json();
+              try { setNewClient(prev => ({ ...prev, ...JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}") })); } catch (e) { setExtractError('Lỗi định dạng.'); }
+            } catch (error) { setExtractError('Lỗi AI.'); } finally { setIsExtractingInfo(false); }
+          };
+          const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung.'); return; } runGeminiExtraction(rawNotes); };
+          const handleFileUpload = (e) => { 
+            const file = e.target.files[0]; if (!file) return; setIsExtractingInfo(true); setExtractError(''); 
+            if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) { setTimeout(() => { setRawNotes(`[FILE: ${file.name}]\nHôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly.`); runGeminiExtraction(`Hôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly.`); }, 1500); } 
+            else { const reader = new FileReader(); reader.onload = async (e) => { setRawNotes(e.target.result); await runGeminiExtraction(e.target.result); }; reader.readAsText(file); } 
+          };
+          
+          const handleSaveNewClient = () => {
+            if (!newClient.alias) { showAlert('Lỗi', 'Cần nhập Bí danh.', 'error'); return; }
+            const todayStr = new Date().toLocaleDateString('vi-VN');
+            const processArr = (val) => Array.isArray(val) ? val : (val ? val.split('\n').filter(i=>i.trim()) : ['Chưa cập nhật']);
+            setClients([{ 
+              id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, alias: newClient.alias, age: newClient.age || 'N/A', category: newClient.category || 'Chưa phân loại', riskScore: 0, riskLevel: 'Chưa đánh giá', lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
+              details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
+            }, ...clients]);
+            setNewClient({ alias: '', age: '', category: '', phone: '', address: '', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' }); setRawNotes(''); showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); setActiveTab('clients');
+          };
+
+          const filteredClients = clients.filter(c => clientFilter === 'active' ? c.status !== 'Đã đóng ca' : c.status === 'Đã đóng ca');
+
+          return (
+            <div className="flex h-screen bg-slate-50 font-sans text-gray-800 relative">
+              {modalConfig.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={modalConfig.type !== 'confirm' ? modalConfig.onConfirm : undefined}></div>
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-10 animate-in">
+                    <div className="flex items-center gap-3 mb-4">
+                      {modalConfig.type === 'error' && <AlertTriangle className="text-red-500" size={28} />}
+                      {modalConfig.type === 'success' && <CheckCircle className="text-green-500" size={28} />}
+                      {modalConfig.type === 'confirm' && <AlertTriangle className="text-amber-500" size={28} />}
+                      {modalConfig.type === 'info' && <Info className="text-blue-500" size={28} />}
+                      <h3 className="text-xl font-bold text-slate-800">{modalConfig.title}</h3>
+                    </div>
+                    <p className="text-slate-600 mb-8 whitespace-pre-wrap leading-relaxed">{modalConfig.message}</p>
+                    <div className="flex justify-end gap-3">
+                      {modalConfig.type === 'confirm' && <button onClick={modalConfig.onCancel} className="px-5 py-2.5 text-slate-600 font-bold bg-slate-100 rounded-xl hover:bg-slate-200">Hủy bỏ</button>}
+                      <button onClick={modalConfig.onConfirm} className={`px-5 py-2.5 text-white font-bold rounded-xl ${modalConfig.type === 'error' ? 'bg-red-600' : modalConfig.type === 'confirm' ? 'bg-amber-600' : 'bg-blue-600'}`}>{modalConfig.type === 'confirm' ? 'Đồng ý' : 'Đóng'}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-20 shrink-0">
+                <div className="p-6"><h1 className="text-2xl font-black text-blue-400">SmartCase<span className="text-white">VN</span></h1><p className="text-xs text-slate-400 mt-1">Hệ thống Quản lý Ca</p></div>
+                <nav className="flex-1 px-4 space-y-2 mt-4">
+                  <button onClick={() => {setActiveTab('dashboard'); setSelectedClient(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}><LayoutDashboard size={20} /> Tổng quan</button>
+                  <button onClick={() => {setActiveTab('clients'); setSelectedClient(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${activeTab === 'clients' || activeTab === 'clientDetail' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}><Users size={20} /> Hồ sơ Thân chủ</button>
+                  <button onClick={() => {setActiveTab('addClient'); setSelectedClient(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${activeTab === 'addClient' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}><FileSignature size={20} /> Phiếu Tiếp nhận</button>
+                </nav>
+              </div>
+
+              <div className="flex-1 flex flex-col overflow-hidden relative">
+                <header className="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm shrink-0 z-10">
+                  <h2 className="text-xl font-bold text-slate-800">{activeTab === 'dashboard' ? 'Bảng Điều Khiển' : activeTab === 'clients' ? 'Danh Sách Hồ Sơ Quản Lý' : activeTab === 'addClient' ? 'Phiếu Tiếp Nhận Đánh Giá Ban Đầu' : 'Chi tiết Hệ sinh thái Can thiệp'}</h2>
+                  <div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-sm font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-green-500"></div> Mạng nội bộ bảo mật</div></div>
+                </header>
+
+                <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50 hide-scrollbar">
+                  
+                  {activeTab === 'dashboard' && (
+                     <div className="space-y-6 animate-in">
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500"><h3 className="text-sm text-slate-500 font-bold">Đang quản lý</h3><p className="text-3xl font-black text-slate-800 mt-2">{clients.filter(c => c.status !== 'Đã đóng ca').length}</p></div>
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-red-500"><h3 className="text-sm text-slate-500 font-bold">Báo động Khẩn cấp</h3><p className="text-3xl font-black text-red-600 mt-2">{clients.filter(c => c.riskLevel === 'Khẩn cấp' && c.status !== 'Đã đóng ca').length}</p></div>
+                         <button onClick={() => setActiveTab('addClient')} className="bg-blue-600 p-6 rounded-2xl shadow-md text-white hover:bg-blue-700 transition-all flex flex-col justify-center items-center gap-2"><PlusCircle size={32} /><span className="font-bold">Tạo hồ sơ mới</span></button>
+                       </div>
+                       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                         <div className="p-5 border-b border-slate-100 bg-amber-50 flex items-center gap-3"><BellRing className="text-amber-600" size={24} /><h3 className="font-bold text-lg text-amber-900">Chuông Báo Hệ Thống</h3></div>
+                         <div className="p-6">
+                           {systemWarnings.length > 0 ? (
+                             <div className="grid gap-4">
+                               {systemWarnings.map((w, i) => (
+                                 <div key={i} className={`flex items-center justify-between p-4 border rounded-xl ${w.warn.bg} ${w.warn.border}`}>
+                                   <div><div className="flex items-center gap-2 mb-1"><span className="font-black text-slate-800">{w.client.id}</span><span className="text-sm text-slate-500">• {w.client.alias}</span></div><p className="font-medium text-slate-700">{w.goal.text}</p></div>
+                                   <div className="flex flex-col items-end gap-2"><span className={`px-3 py-1 rounded-full text-xs font-bold ${w.warn.color} bg-white border ${w.warn.border}`}>{w.warn.text} (Hạn: {w.goal.deadline})</span><button onClick={() => navToClientDetail(w.client, 'plan')} className="text-sm font-bold text-blue-600 hover:underline">Cập nhật ngay &rarr;</button></div>
+                                 </div>
+                               ))}
+                             </div>
+                           ) : (<div className="text-center py-8 text-slate-500"><CheckCircle size={48} className="mx-auto mb-3 text-green-300" /><p className="font-medium">Không có mục tiêu nào bị quá hạn.</p></div>)}
+                         </div>
+                       </div>
+                     </div>
+                  )}
+
+                  {activeTab === 'clients' && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in">
+                      <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-wrap gap-4">
+                        <div><h3 className="font-bold text-lg">Quản lý Hồ sơ</h3><p className="text-sm text-slate-500 mt-1 flex items-center gap-1"><ShieldAlert size={14}/> Dữ liệu mã hóa</p></div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex bg-slate-100 p-1 rounded-lg">
+                            <button onClick={() => setClientFilter('active')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'active' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Đang can thiệp</button>
+                            <button onClick={() => setClientFilter('closed')} className={`px-4 py-2 rounded-md text-sm font-bold ${clientFilter === 'closed' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Đã đóng ca</button>
+                          </div>
+                          <button onClick={() => setActiveTab('addClient')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-bold text-sm"><PlusCircle size={16}/> Thêm Mới</button>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">Nhóm đối tượng</th><th className="p-4 font-bold">Mức Rủi Ro</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
+                          <tbody>
+                            {filteredClients.length > 0 ? filteredClients.map((client) => (
+                              <tr key={client.id} className={`border-b border-slate-100 ${client.status === 'Đã đóng ca' ? 'bg-slate-50 opacity-75' : 'hover:bg-blue-50/50'}`}>
+                                <td className="p-4 font-black text-blue-700">{client.id}</td>
+                                <td className="p-4 font-medium text-slate-700 flex items-center gap-3">
+                                  {client.avatar ? <img src={client.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm"/> : <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">{client.alias.charAt(0)}</div>}
+                                  {client.alias}
+                                </td>
+                                <td className="p-4 text-slate-600">{client.category}</td><td className="p-4">{getRiskBadge(client.riskLevel)}</td>
+                                <td className="p-4 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button onClick={() => navToClientDetail(client)} className={`px-4 py-2 rounded-lg font-bold text-sm flex-1 ${client.status === 'Đã đóng ca' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'}`}>{client.status === 'Đã đóng ca' ? 'Xem Lại' : 'Can thiệp'}</button>
+                                    <button onClick={() => handleDeleteClient(client.id)} className="p-2 text-slate-400 hover:text-red-600 rounded-lg"><Trash2 size={18} /></button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )) : (<tr><td colSpan="5" className="p-8 text-center text-slate-500">Không có hồ sơ nào.</td></tr>)}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'addClient' && (
+                    <div className="max-w-5xl mx-auto space-y-6 animate-in">
+                      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 overflow-hidden">
+                        <div className="p-5 border-b border-indigo-100 bg-white/60"><div className="flex items-center gap-3 text-indigo-800"><Sparkles className="text-indigo-500" size={24} /><div><h3 className="font-bold text-lg">AI Phân Tích Báo Cáo Thô</h3></div></div></div>
+                        <div className="p-6">
+                          <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-indigo-300 rounded-xl bg-white p-8 text-center cursor-pointer hover:bg-indigo-50 mb-4">
+                            <input type="file" ref={fileInputRef} className="hidden" accept=".txt,.doc,.docx" onChange={handleFileUpload} />
+                            <div className="flex flex-col items-center justify-center text-indigo-600">{isExtractingInfo ? (<><Loader2 size={48} className="animate-spin mb-3 text-indigo-500" /><h4 className="font-bold">Đang xử lý...</h4></>) : (<><UploadCloud size={48} className="mb-3" /><h4 className="font-bold">Nhấn Tải File Báo Cáo</h4></>)}</div>
+                          </div>
+                          <div className="relative"><textarea rows={3} value={rawNotes} onChange={(e) => setRawNotes(e.target.value)} placeholder="Hoặc dán văn bản trực tiếp..." className="w-full p-3 rounded-xl border border-indigo-200 outline-none" disabled={isExtractingInfo}/></div>
+                          <div className="mt-4 flex justify-between items-center"><button onClick={handleAutoFillNotes} disabled={isExtractingInfo || !rawNotes} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2"><Bot size={18} /> Phân tích tự động</button></div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="bg-slate-800 text-white p-5 px-8 flex items-center gap-3"><UserCircle size={24} /><h3 className="font-bold text-lg">Biểu mẫu Tiếp nhận & SWOT</h3></div>
+                        <div className="p-8 space-y-8">
+                          <div>
+                            <h4 className="text-md font-bold text-blue-700 border-b-2 border-slate-100 pb-3 mb-5 uppercase">A. Thông Tin Cơ Bản</h4>
+                            <div className="flex flex-col sm:flex-row gap-6 mb-6">
+                              <div className="flex flex-col items-center gap-2">
+                                <div className="relative group cursor-pointer w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
+                                  {newClient.avatar ? <img src={newClient.avatar} className="w-full h-full object-cover" /> : <Camera className="text-slate-400" size={32} />}
+                                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleAvatarUpload(e, setNewClient, newClient)} />
+                                </div>
+                              </div>
+                              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label className="block text-sm font-bold mb-2">Bí danh *</label><input type="text" value={newClient.alias} onChange={(e) => setNewClient({...newClient, alias: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div><label className="block text-sm font-bold mb-2">Độ tuổi</label><input type="number" value={newClient.age} onChange={(e) => setNewClient({...newClient, age: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div><label className="block text-sm font-bold mb-2">Nhóm vấn đề</label><input type="text" value={newClient.category} onChange={(e) => setNewClient({...newClient, category: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div><label className="block text-sm font-bold mb-2">Số điện thoại</label><input type="text" value={newClient.phone} onChange={(e) => setNewClient({...newClient, phone: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2">Hoàn cảnh</label><textarea rows={2} value={newClient.family} onChange={(e) => setNewClient({...newClient, family: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-md font-bold text-blue-700 border-b-2 border-slate-100 pb-3 mb-5 uppercase">B. Phân Tích SWOT</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div><label className="block text-sm font-bold text-emerald-700 mb-2">S - Điểm mạnh</label><textarea rows={3} value={newClient.swot_S} onChange={(e) => setNewClient({...newClient, swot_S: e.target.value})} className="w-full p-3 border border-emerald-200 rounded-xl bg-emerald-50 outline-none" /></div>
+                              <div><label className="block text-sm font-bold text-orange-700 mb-2">W - Điểm yếu</label><textarea rows={3} value={newClient.swot_W} onChange={(e) => setNewClient({...newClient, swot_W: e.target.value})} className="w-full p-3 border border-orange-200 rounded-xl bg-orange-50 outline-none" /></div>
+                              <div><label className="block text-sm font-bold text-blue-700 mb-2">O - Cơ hội</label><textarea rows={3} value={newClient.swot_O} onChange={(e) => setNewClient({...newClient, swot_O: e.target.value})} className="w-full p-3 border border-blue-200 rounded-xl bg-blue-50 outline-none" /></div>
+                              <div><label className="block text-sm font-bold text-purple-700 mb-2">T - Thách thức</label><textarea rows={3} value={newClient.swot_T} onChange={(e) => setNewClient({...newClient, swot_T: e.target.value})} className="w-full p-3 border border-purple-200 rounded-xl bg-purple-50 outline-none" /></div>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
+                            <button onClick={() => setActiveTab('clients')} className="px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl">Hủy bỏ</button>
+                            <button onClick={handleSaveNewClient} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl">Lưu Hồ Sơ</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'clientDetail' && selectedClient && (
+                    <div className="max-w-5xl mx-auto animate-in">
+                      <div className="flex justify-between items-center mb-6">
+                        <button onClick={() => setActiveTab('clients')} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-bold"><ChevronLeft size={20} /> Trở về danh sách</button>
+                        <div className="flex items-center gap-2">
+                          {selectedClient.status === 'Đã đóng ca' && ( <button onClick={handleReopenCase} className="flex items-center gap-2 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-bold text-sm border border-blue-200"><RotateCcw size={16} /> Mở lại hồ sơ</button> )}
+                          <button onClick={() => handleDeleteClient(selectedClient.id)} className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg font-bold text-sm"><Trash2 size={16} /> Xóa hồ sơ</button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6 flex flex-wrap justify-between items-center gap-4">
+                        <div className="flex items-center gap-5">
+                          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-100 flex-shrink-0 bg-blue-50 flex items-center justify-center">
+                            {selectedClient.avatar ? <img src={selectedClient.avatar} className="w-full h-full object-cover" /> : <span className="font-black text-2xl text-blue-700">{selectedClient.alias.charAt(0)}</span>}
+                          </div>
+                          <div><h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">Hồ sơ: {selectedClient.id} {getRiskBadge(selectedClient.riskLevel)}</h2><p className="text-slate-500 font-medium mt-1">Bí danh: {selectedClient.alias} • Nhóm: {selectedClient.category}</p></div>
+                        </div>
+                        <div className="text-right"><p className="text-sm text-slate-500 font-bold">Trạng thái</p><span className="inline-block mt-1 px-3 py-1 bg-slate-800 text-white text-sm font-bold rounded-full">{selectedClient.status}</span></div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="flex overflow-x-auto border-b border-slate-200 hide-scrollbar">
+                          {[ { id: 'info', icon: FolderOpen, label: '1. Thông tin' }, { id: 'assessment', icon: ShieldAlert, label: '2. Đánh giá SWOT' }, { id: 'plan', icon: Target, label: '3. Kế hoạch KPI' }, { id: 'referrals', icon: Network, label: '4. Nguồn lực' }, { id: 'evaluation', icon: BarChart3, label: '5. Lượng giá' } ].map(tab => (
+                            <button key={tab.id} onClick={() => {setDetailSubTab(tab.id); setIsEditingInfo(false); setIsEditingSwot(false);}} className={`flex items-center gap-2 px-6 py-4 font-bold whitespace-nowrap transition-all border-b-2 ${detailSubTab === tab.id ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500'}`}><tab.icon size={18} /> {tab.label}</button>
+                          ))}
+                        </div>
+
+                        <div className="p-8">
+                          {detailSubTab === 'info' && (
+                            <div className="space-y-6 animate-in">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="bg-blue-50 text-blue-800 px-4 py-2.5 rounded-xl border border-blue-100 flex items-center gap-3"><ShieldAlert size={18}/><p className="text-sm font-medium">Bảo mật thông tin.</p></div>
+                                {!isEditingInfo ? ( <button onClick={startEditingInfo} className="flex items-center gap-2 bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-lg font-bold text-sm"><Edit3 size={16}/> Chỉnh sửa</button>
+                                ) : ( <div className="flex gap-2"><button onClick={() => setIsEditingInfo(false)} className="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-sm">Hủy</button><button onClick={saveEditingInfo} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm flex items-center gap-2"><Save size={16}/> Lưu lại</button></div> )}
+                              </div>
+                              
+                              {!isEditingInfo ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID:</strong> {selectedClient.id}</li><li><strong>Bí danh:</strong> {selectedClient.alias}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Nhóm:</strong> {selectedClient.category}</li></ul></div>
+                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family}</p></div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col sm:flex-row gap-6 bg-slate-50 p-6 rounded-2xl border border-blue-100">
+                                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label className="block text-sm font-bold mb-1">Bí danh</label><input type="text" value={editInfoData.alias} onChange={(e) => setEditInfoData({...editInfoData, alias: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Độ tuổi</label><input type="text" value={editInfoData.age} onChange={(e) => setEditInfoData({...editInfoData, age: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Gia đình</label><textarea rows={3} value={editInfoData.family} onChange={(e) => setEditInfoData({...editInfoData, family: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {detailSubTab === 'assessment' && (
+                            <div className="space-y-6 animate-in">
+                               <div className="flex justify-between items-start mb-6">
+                                <h3 className="font-black text-xl text-slate-800">Phân tích SWOT</h3>
+                                {!isEditingSwot ? ( <button onClick={startEditingSwot} className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm"><Edit3 size={16}/> Chỉnh sửa</button>
+                                ) : ( <div className="flex gap-2"><button onClick={() => setIsEditingSwot(false)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg font-bold text-sm">Hủy</button><button onClick={saveEditingSwot} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm flex items-center gap-2"><Save size={16}/> Lưu lại</button></div> )}
+                               </div>
+                               
+                               {!isEditingSwot ? (
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl"><h4 className="font-bold text-emerald-800 mb-4 border-b border-emerald-200 pb-2">S - Điểm mạnh</h4><ul className="space-y-2">{selectedClient.details?.swot?.S?.map((s, i) => (<li key={i} className="flex text-emerald-900 text-sm font-medium"><CheckCircle size={16} className="text-emerald-500 mr-2 mt-0.5"/> {s}</li>))}</ul></div>
+                                    <div className="bg-orange-50 border border-orange-200 p-6 rounded-2xl"><h4 className="font-bold text-orange-800 mb-4 border-b border-orange-200 pb-2">W - Điểm yếu</h4><ul className="space-y-2">{selectedClient.details?.swot?.W?.map((w, i) => (<li key={i} className="flex text-orange-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-2 mt-1.5"/> {w}</li>))}</ul></div>
+                                    <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl"><h4 className="font-bold text-blue-800 mb-4 border-b border-blue-200 pb-2">O - Cơ hội</h4><ul className="space-y-2">{selectedClient.details?.swot?.O?.map((o, i) => (<li key={i} className="flex text-blue-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 mt-1.5"/> {o}</li>))}</ul></div>
+                                    <div className="bg-purple-50 border border-purple-200 p-6 rounded-2xl"><h4 className="font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2">T - Thách thức</h4><ul className="space-y-2">{selectedClient.details?.swot?.T?.map((t, i) => (<li key={i} className="flex text-purple-900 text-sm font-medium"><div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-2 mt-1.5"/> {t}</li>))}</ul></div>
+                                 </div>
+                               ) : (
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-2xl border border-blue-100">
+                                    <div><label className="block text-sm font-bold text-emerald-700 mb-2">Điểm mạnh</label><textarea rows={4} value={editSwotData.S} onChange={(e) => setEditSwotData({...editSwotData, S: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
+                                    <div><label className="block text-sm font-bold text-orange-700 mb-2">Điểm yếu</label><textarea rows={4} value={editSwotData.W} onChange={(e) => setEditSwotData({...editSwotData, W: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
+                                 </div>
+                               )}
+                            </div>
+                          )}
+
+                          {detailSubTab === 'plan' && (
+                            <div className="animate-in">
+                              <div className="flex justify-between items-center mb-6"><h3 className="font-black text-xl text-slate-800">Lộ trình Hỗ trợ KPI</h3><button onClick={() => setShowAddGoalForm(!showAddGoalForm)} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg">Thêm mục tiêu</button></div>
+
+                              {showAddGoalForm && (
+                                <div className="mb-6 bg-white p-6 rounded-2xl border border-blue-200 shadow-xl">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Nội dung</label><input type="text" value={newGoalData.text} onChange={(e) => setNewGoalData({...newGoalData, text: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Ngày Hết Hạn</label><input type="date" value={newGoalData.deadline} onChange={(e) => setNewGoalData({...newGoalData, deadline: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                  </div>
+                                  <div className="flex justify-end gap-3"><button onClick={() => setShowAddGoalForm(false)} className="px-5 py-2 bg-slate-100 rounded-lg font-bold">Hủy</button><button onClick={handleSaveNewGoal} className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold">Lưu</button></div>
+                                </div>
+                              )}
+                              
+                              {selectedClient.details?.goals?.length > 0 ? (
+                                <div className="space-y-4">
+                                  {selectedClient.details.goals.map(goal => {
+                                    const warning = getGoalWarning(goal.deadline, goal.status);
+                                    return (
+                                    <div key={goal.id} className={`p-5 bg-white border rounded-xl shadow-sm ${warning ? warning.border : 'border-slate-200'}`}>
+                                      <div className="flex justify-between gap-3 mb-4">
+                                        <div className="flex items-center gap-3">
+                                          <div onClick={() => handleToggleGoalStatus(goal.id, goal.status)} className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${goal.status === 'Hoàn thành' ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>{goal.status === 'Hoàn thành' && <CheckCircle size={16} className="text-white" />}</div>
+                                          <div>
+                                            <span className={`font-bold text-lg ${goal.status === 'Hoàn thành' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{goal.text}</span>
+                                            <div className="flex items-center gap-3 mt-1"><span className="text-xs font-bold text-slate-500">Hạn: {goal.deadline || 'Chưa xác định'}</span>{warning && (<span className={`text-[11px] font-bold px-2 py-0.5 rounded ${warning.color} ${warning.bg}`}>{warning.text}</span>)}</div>
+                                          </div>
+                                        </div>
+                                        <button onClick={() => handleDeleteGoal(goal.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={18} /></button>
+                                      </div>
+
+                                      {goal.kpi && (
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
+                                          <div className="flex items-center gap-4 text-sm font-medium">
+                                            <div className="flex flex-col"><span className="text-xs text-slate-400">Baseline</span><span className="font-bold text-slate-700">{goal.kpi.baseline}</span></div><ArrowRight size={14} className="text-slate-300"/>
+                                            <div className="flex flex-col"><span className="text-xs text-blue-500 font-bold">Hiện tại</span><span className="font-black text-blue-700 text-lg">{goal.kpi.current}</span></div><ArrowRight size={14} className="text-slate-300"/>
+                                            <div className="flex flex-col"><span className="text-xs text-slate-400">Đích</span><span className="font-bold text-emerald-600">{goal.kpi.target}</span></div>
+                                          </div>
+                                          
+                                          {updatingGoalId === goal.id ? (
+                                            <div className="flex gap-2">
+                                              <input type="date" value={tempKpiDate} onChange={e => setTempKpiDate(e.target.value)} className="p-1 border rounded" />
+                                              <input type="number" value={tempKpiValue} onChange={e => setTempKpiValue(e.target.value)} className="w-16 p-1 border rounded text-center" />
+                                              <button onClick={() => saveKpiUpdate(goal.id)} className="bg-blue-600 text-white p-1.5 rounded"><CheckCircle size={16}/></button>
+                                            </div>
+                                          ) : (
+                                            <button onClick={() => { setUpdatingGoalId(goal.id); setTempKpiValue(goal.kpi.current); const d = new Date(); setTempKpiDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100">Cập nhật Giai đoạn</button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )})}
+                                </div>
+                              ) : (<p className="text-center py-8">Chưa có mục tiêu.</p>)}
+                            </div>
+                          )}
+
+                          {detailSubTab === 'referrals' && (
+                            <div className="animate-in">
+                               <h3 className="font-black text-xl mb-6">Nguồn lực Hỗ trợ (Referrals)</h3>
+                               {selectedClient.details?.referrals?.map((ref, idx) => (
+                                <div key={idx} className="flex justify-between p-5 bg-white border rounded-2xl shadow-sm mb-4">
+                                  <div><h4 className="font-bold text-lg">{ref.org}</h4><p className="font-medium text-slate-500">{ref.service}</p></div>
+                                  <div className="text-right"><span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{ref.status}</span><p className="text-xs text-slate-400 mt-1">{ref.date}</p></div>
+                                </div>
+                               ))}
+                               
+                               {showAddReferralForm ? (
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-indigo-200 mt-4">
+                                  <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div><label className="block text-sm font-bold mb-1">Tổ chức</label><input type="text" value={newRefOrg} onChange={(e)=>setNewRefOrg(e.target.value)} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Dịch vụ</label><input type="text" value={newRefService} onChange={(e)=>setNewRefService(e.target.value)} className="w-full p-2 border rounded-lg" /></div>
+                                  </div>
+                                  <div className="flex justify-end gap-3"><button onClick={()=>setShowAddReferralForm(false)} className="px-5 py-2 font-bold bg-white border rounded-lg">Hủy</button><button onClick={handleSaveNewReferral} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-lg">Lưu</button></div>
+                                </div>
+                              ) : (
+                                <button onClick={() => setShowAddReferralForm(true)} className="w-full py-4 border-2 border-dashed text-indigo-600 font-bold rounded-2xl mt-4">Kết nối nguồn lực mới</button>
+                              )}
+                            </div>
+                          )}
+
+                          {detailSubTab === 'evaluation' && (
+                            <div className="animate-in">
+                              <div className="flex justify-between items-center mb-8">
+                                <h3 className="font-black text-xl">Biểu đồ Lượng giá</h3>
+                                {selectedClient.status !== 'Đã đóng ca' ? (
+                                  <button onClick={handleCloseCase} className="bg-slate-800 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2"><CheckCircle size={18}/> Đóng ca</button>
+                                ) : (
+                                  <button onClick={handleReopenCase} className="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2"><RotateCcw size={18}/> Mở lại hồ sơ</button>
+                                )}
+                              </div>
+                              {selectedClient.details?.goals?.map(goal => (
+                                goal.kpi?.history?.length > 0 && (
+                                  <div key={goal.id} className="bg-white border rounded-2xl p-6 shadow-sm mb-6">
+                                    <div className="flex justify-between items-center mb-4 border-b pb-3"><h4 className="font-bold flex items-center gap-2"><TrendingDown size={20} className="text-blue-600"/> {goal.text}</h4><span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">Hiện tại: {goal.kpi.current}</span></div>
+                                    <MiniLineChart kpiData={goal.kpi} />
+                                  </div>
+                                )
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </main>
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CaseManagementDemo />);
+    </script>
 </body>
 </html>
