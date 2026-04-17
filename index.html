@@ -326,7 +326,7 @@
           // HÀM GỌI API GEMINI (AI)
           const runGeminiExtraction = async (textToProcess) => {
             setIsExtractingInfo(true); setExtractError(''); 
-            const apiKey = ""; // <--- BẠN CẦN ĐIỀN API KEY VÀO ĐÂY KHI LÊN VERCEL
+            const apiKey = "AQ.Ab8RN6Kwu4tv7oficjKZnHSCE5VsO4VxJAQnHx9G4EGRH0eL4A"; // <--- BẠN CẦN ĐIỀN API KEY VÀO ĐÂY KHI LÊN VERCEL
             const prompt = `NVCTXH. Phân tích văn bản JSON. Ẩn danh. {alias, age, category, interventionLevel (chọn 1 trong 4: Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi), phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
             try {
               let response; let retries = 0; const delays = [1000, 2000, 4000];
