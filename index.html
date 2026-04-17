@@ -25,9 +25,6 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide-react@0.284.0/dist/umd/lucide-react.min.js"></script>
-    
     <!-- Babel (Biên dịch JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
@@ -42,7 +39,7 @@
     </div>
 
     <script type="text/babel">
-        // 1. ERROR BOUNDARY: Chống sập giao diện trắng màn hình
+        // 1. ERROR BOUNDARY
         class ErrorBoundary extends React.Component {
             constructor(props) { super(props); this.state = { hasError: false, errorInfo: null }; }
             static getDerivedStateFromError(error) { return { hasError: true, errorInfo: error.toString() }; }
@@ -63,61 +60,56 @@
 
         const { useState, useRef, useEffect } = React;
         
-        // 2. CƠ CHẾ SAFE ICON BULLETPROOF (Tiệt nọc lỗi 130)
-        const L = window.lucide || {};
-        
-        // Nếu thư viện không có icon, trả về thẻ span thay vì undefined để React không bị lỗi 130
-        const FallbackIcon = (props) => <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-100 text-red-600 text-xs font-black" {...props}>?</span>;
-        
-        const getIcon = (name) => {
-            if (L && L[name]) return L[name];
-            console.warn(`Icon [${name}] không tìm thấy, sử dụng Fallback.`);
-            return FallbackIcon;
-        };
+        // 2. THAY THẾ ICONS BẰNG TEXT/EMOJI ĐỂ CHỐNG LỖI 100%
+        const TextIcon = ({ symbol, className, size }) => (
+            <span className={`inline-flex items-center justify-center ${className || ''}`} style={{ fontSize: size ? `${size}px` : 'inherit', lineHeight: 1 }}>
+                {symbol}
+            </span>
+        );
 
-        const LayoutDashboard = getIcon('LayoutDashboard');
-        const Users = getIcon('Users');
-        const FileText = getIcon('FileText');
-        const AlertTriangle = getIcon('AlertTriangle');
-        const Search = getIcon('Search');
-        const PlusCircle = getIcon('PlusCircle');
-        const CheckCircle = getIcon('CheckCircle');
-        const Clock = getIcon('Clock');
-        const Sparkles = getIcon('Sparkles');
-        const Loader2 = getIcon('Loader2');
-        const Bot = getIcon('Bot');
-        const FileInput = getIcon('FileInput');
-        const Save = getIcon('Save');
-        const X = getIcon('X');
-        const UserCircle = getIcon('UserCircle');
-        const FolderOpen = getIcon('FolderOpen');
-        const ShieldAlert = getIcon('ShieldAlert');
-        const Target = getIcon('Target');
-        const Network = getIcon('Network');
-        const TrendingUp = getIcon('TrendingUp');
-        const ChevronLeft = getIcon('ChevronLeft');
-        const ArrowRight = getIcon('ArrowRight');
-        const Activity = getIcon('Activity');
-        const HeartHandshake = getIcon('HeartHandshake');
-        const BriefcaseMedical = getIcon('BriefcaseMedical');
-        const GraduationCap = getIcon('GraduationCap');
-        const Scale = getIcon('Scale');
-        const FileSignature = getIcon('FileSignature');
-        const UploadCloud = getIcon('UploadCloud');
-        const FileType = getIcon('FileType');
-        const Building = getIcon('Building');
-        const Trash2 = getIcon('Trash2');
-        const Info = getIcon('Info');
-        const Edit3 = getIcon('Edit3');
-        const CalendarClock = getIcon('CalendarClock');
-        const Timer = getIcon('Timer');
-        const ListTodo = getIcon('ListTodo');
-        const BellRing = getIcon('BellRing');
-        const BarChart3 = getIcon('BarChart3');
-        const SlidersHorizontal = getIcon('SlidersHorizontal');
-        const TrendingDown = getIcon('TrendingDown');
-        const RotateCcw = getIcon('RotateCcw');
-        const Camera = getIcon('Camera');
+        const LayoutDashboard = (p) => <TextIcon symbol="📊" {...p} />;
+        const Users = (p) => <TextIcon symbol="👥" {...p} />;
+        const FileText = (p) => <TextIcon symbol="📝" {...p} />;
+        const AlertTriangle = (p) => <TextIcon symbol="⚠️" {...p} />;
+        const Search = (p) => <TextIcon symbol="🔍" {...p} />;
+        const PlusCircle = (p) => <TextIcon symbol="➕" {...p} />;
+        const CheckCircle = (p) => <TextIcon symbol="✅" {...p} />;
+        const Clock = (p) => <TextIcon symbol="⏱️" {...p} />;
+        const Sparkles = (p) => <TextIcon symbol="✨" {...p} />;
+        const Loader2 = ({className, ...p}) => <TextIcon symbol="⏳" className={className} {...p} />;
+        const Bot = (p) => <TextIcon symbol="🤖" {...p} />;
+        const FileInput = (p) => <TextIcon symbol="📁" {...p} />;
+        const Save = (p) => <TextIcon symbol="💾" {...p} />;
+        const X = (p) => <TextIcon symbol="❌" {...p} />;
+        const UserCircle = (p) => <TextIcon symbol="👤" {...p} />;
+        const FolderOpen = (p) => <TextIcon symbol="📂" {...p} />;
+        const ShieldAlert = (p) => <TextIcon symbol="🛡️" {...p} />;
+        const Target = (p) => <TextIcon symbol="🎯" {...p} />;
+        const Network = (p) => <TextIcon symbol="🔗" {...p} />;
+        const TrendingUp = (p) => <TextIcon symbol="📈" {...p} />;
+        const ChevronLeft = (p) => <TextIcon symbol="⬅️" {...p} />;
+        const ArrowRight = (p) => <TextIcon symbol="➡️" {...p} />;
+        const Activity = (p) => <TextIcon symbol="🏥" {...p} />;
+        const HeartHandshake = (p) => <TextIcon symbol="🤝" {...p} />;
+        const BriefcaseMedical = (p) => <TextIcon symbol="💼" {...p} />;
+        const GraduationCap = (p) => <TextIcon symbol="🎓" {...p} />;
+        const Scale = (p) => <TextIcon symbol="⚖️" {...p} />;
+        const FileSignature = (p) => <TextIcon symbol="✍️" {...p} />;
+        const UploadCloud = (p) => <TextIcon symbol="☁️" {...p} />;
+        const FileType = (p) => <TextIcon symbol="📄" {...p} />;
+        const Building = (p) => <TextIcon symbol="🏢" {...p} />;
+        const Trash2 = (p) => <TextIcon symbol="🗑️" {...p} />;
+        const Info = (p) => <TextIcon symbol="ℹ️" {...p} />;
+        const Edit3 = (p) => <TextIcon symbol="✏️" {...p} />;
+        const CalendarClock = (p) => <TextIcon symbol="📅" {...p} />;
+        const Timer = (p) => <TextIcon symbol="⏲️" {...p} />;
+        const ListTodo = (p) => <TextIcon symbol="📋" {...p} />;
+        const BellRing = (p) => <TextIcon symbol="🔔" {...p} />;
+        const BarChart3 = (p) => <TextIcon symbol="📊" {...p} />;
+        const SlidersHorizontal = (p) => <TextIcon symbol="🎛️" {...p} />;
+        const TrendingDown = (p) => <TextIcon symbol="📉" {...p} />;
+        const RotateCcw = (p) => <TextIcon symbol="🔄" {...p} />;
+        const Camera = (p) => <TextIcon symbol="📷" {...p} />;
 
         // 3. DATE HELPERS
         const today = new Date();
@@ -174,7 +166,9 @@
         // 5. MOCK DATA
         const initialClients = [
           { 
-            id: 'TE-001', alias: 'L.T.H', age: 16, category: 'Bạo lực gia đình / Bỏ học', riskScore: 16, riskLevel: 'Khẩn cấp', lastVisit: addDays(-2), status: 'Đang can thiệp',
+            id: 'TE-001', alias: 'L.T.H', age: 16, category: 'Bạo lực gia đình / Bỏ học', 
+            riskScore: 16, riskLevel: 'Khẩn cấp', interventionLevel: 'Can thiệp Khẩn cấp', 
+            lastVisit: addDays(-2), status: 'Đang can thiệp',
             phone: '090xxxxxxx', address: 'Quận 4, TP.HCM', avatar: null,
             details: {
               family: 'Sống với bà ngoại (70 tuổi, yếu). Mẹ đơn thân đi làm xa. Dượng ruột hay say xỉn bạo hành.', history: 'Từng nhập viện do chấn thương phần mềm năm 2025.',
@@ -197,7 +191,9 @@
             }
           },
           { 
-            id: 'PN-042', alias: 'T.T.B', age: 35, category: 'Mẹ đơn thân/Nghèo', riskScore: 8, riskLevel: 'Trung bình', lastVisit: addDays(-10), status: 'Theo dõi',
+            id: 'PN-042', alias: 'T.T.B', age: 35, category: 'Mẹ đơn thân/Nghèo', 
+            riskScore: 8, riskLevel: 'Trung bình', interventionLevel: 'Hỗ trợ Cơ bản', 
+            lastVisit: addDays(-10), status: 'Theo dõi',
             phone: '098xxxxxxx', address: 'Quận 8, TP.HCM', avatar: null,
             details: { 
               family: 'Nuôi 2 con nhỏ. Chồng ly hôn.', history: 'Khỏe mạnh.', swot: { S: ['Chăm chỉ'], W: ['Học vấn thấp'], O: ['Vay vốn'], T: ['Lạm phát'] },
@@ -232,7 +228,7 @@
           const [newRefService, setNewRefService] = useState('');
           const [newRefStatus, setNewRefStatus] = useState('Đã kết nối');
 
-          const [newClient, setNewClient] = useState({ alias: '', age: '', category: '', phone: '', address: '', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' });
+          const [newClient, setNewClient] = useState({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' });
           const [rawNotes, setRawNotes] = useState('');
           const [isExtractingInfo, setIsExtractingInfo] = useState(false);
           const [extractError, setExtractError] = useState('');
@@ -270,12 +266,22 @@
             return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><CheckCircle size={12}/> Thấp</span>;
           };
 
+          const getInterventionBadge = (level) => {
+            switch(level) {
+                case 'Can thiệp Khẩn cấp': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold w-max">Khẩn cấp</span>;
+                case 'Can thiệp Chuyên sâu': return <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-bold w-max">Chuyên sâu</span>;
+                case 'Hỗ trợ Cơ bản': return <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded text-xs font-bold w-max">Cơ bản</span>;
+                case 'Phòng ngừa/Theo dõi': return <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-bold w-max">Phòng ngừa</span>;
+                default: return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-bold w-max">{level || 'Chưa phân loại'}</span>;
+            }
+          };
+
           const updateClientInState = (updated) => { setClients(clients.map(c => c.id === updated.id ? updated : c)); setSelectedClient(updated); };
           const navToClientDetail = (client, tab = 'info') => { setSelectedClient(client); setActiveTab('clientDetail'); setDetailSubTab(tab); setIsEditingInfo(false); setIsEditingSwot(false); setShowAddGoalForm(false); };
           const handleDeleteClient = (id) => showConfirm('CẢNH BÁO BẢO MẬT', `Xóa vĩnh viễn hồ sơ [${id}]? Hành động không thể hoàn tác.`, () => { setClients(clients.filter(c => c.id !== id)); if (selectedClient?.id === id) { setSelectedClient(null); setActiveTab('clients'); } showAlert('Thành công', `Đã xóa hồ sơ [${id}].`, 'success'); });
 
-          const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
-          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
+          const startEditingInfo = () => { setEditInfoData({ alias: selectedClient.alias, age: selectedClient.age, category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, history: selectedClient.details.history, avatar: selectedClient.avatar }); setIsEditingInfo(true); };
+          const saveEditingInfo = () => { updateClientInState({ ...selectedClient, alias: editInfoData.alias, age: editInfoData.age, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, details: { ...selectedClient.details, family: editInfoData.family, history: editInfoData.history } }); setIsEditingInfo(false); showAlert('Thành công', 'Đã cập nhật thông tin!', 'success'); };
 
           const startEditingSwot = () => { setEditSwotData({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n') }); setIsEditingSwot(true); };
           const saveEditingSwot = () => { updateClientInState({ ...selectedClient, details: { ...selectedClient.details, swot: { S: editSwotData.S.split('\n').filter(i=>i.trim()), W: editSwotData.W.split('\n').filter(i=>i.trim()), O: editSwotData.O.split('\n').filter(i=>i.trim()), T: editSwotData.T.split('\n').filter(i=>i.trim()) } } }); setIsEditingSwot(false); showAlert('Thành công', 'Đã cập nhật SWOT!', 'success'); };
@@ -327,7 +333,7 @@
 
           const runGeminiExtraction = async (textToProcess) => {
             setIsExtractingInfo(true); setExtractError(''); const apiKey = ""; 
-            const prompt = `NVCTXH. Phân tích SWOT JSON. Ẩn danh. {alias, age, category, phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
+            const prompt = `NVCTXH. Phân tích SWOT JSON. Ẩn danh. {alias, age, category, interventionLevel (chọn 1 trong 4: Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi), phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
             try {
               let response; let retries = 0; const delays = [1000, 2000, 4000];
               while (retries < 3) {
@@ -342,7 +348,7 @@
           const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung.'); return; } runGeminiExtraction(rawNotes); };
           const handleFileUpload = (e) => { 
             const file = e.target.files[0]; if (!file) return; setIsExtractingInfo(true); setExtractError(''); 
-            if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) { setTimeout(() => { setRawNotes(`[FILE: ${file.name}]\nHôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly.`); runGeminiExtraction(`Hôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly.`); }, 1500); } 
+            if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) { setTimeout(() => { setRawNotes(`[FILE: ${file.name}]\nHôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly khẩn cấp.`); runGeminiExtraction(`Hôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly khẩn cấp.`); }, 1500); } 
             else { const reader = new FileReader(); reader.onload = async (e) => { setRawNotes(e.target.result); await runGeminiExtraction(e.target.result); }; reader.readAsText(file); } 
           };
           
@@ -351,10 +357,10 @@
             const todayStr = new Date().toLocaleDateString('vi-VN');
             const processArr = (val) => Array.isArray(val) ? val : (val ? val.split('\n').filter(i=>i.trim()) : ['Chưa cập nhật']);
             setClients([{ 
-              id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, alias: newClient.alias, age: newClient.age || 'N/A', category: newClient.category || 'Chưa phân loại', riskScore: 0, riskLevel: 'Chưa đánh giá', lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
+              id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, alias: newClient.alias, age: newClient.age || 'N/A', category: newClient.category || 'Chưa phân loại', interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', riskScore: 0, riskLevel: 'Chưa đánh giá', lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
               details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
-            setNewClient({ alias: '', age: '', category: '', phone: '', address: '', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' }); setRawNotes(''); showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); setActiveTab('clients');
+            setNewClient({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' }); setRawNotes(''); showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); setActiveTab('clients');
           };
 
           const filteredClients = clients.filter(c => clientFilter === 'active' ? c.status !== 'Đã đóng ca' : c.status === 'Đã đóng ca');
@@ -366,10 +372,10 @@
                   <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={modalConfig.type !== 'confirm' ? modalConfig.onConfirm : undefined}></div>
                   <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-10 animate-in">
                     <div className="flex items-center gap-3 mb-4">
-                      {modalConfig.type === 'error' && <AlertTriangle className="text-red-500" size={28} />}
-                      {modalConfig.type === 'success' && <CheckCircle className="text-green-500" size={28} />}
-                      {modalConfig.type === 'confirm' && <AlertTriangle className="text-amber-500" size={28} />}
-                      {modalConfig.type === 'info' && <Info className="text-blue-500" size={28} />}
+                      {modalConfig.type === 'error' && <AlertTriangle size={28} className="text-red-500" />}
+                      {modalConfig.type === 'success' && <CheckCircle size={28} className="text-green-500" />}
+                      {modalConfig.type === 'confirm' && <AlertTriangle size={28} className="text-amber-500" />}
+                      {modalConfig.type === 'info' && <Info size={28} className="text-blue-500" />}
                       <h3 className="text-xl font-bold text-slate-800">{modalConfig.title}</h3>
                     </div>
                     <p className="text-slate-600 mb-8 whitespace-pre-wrap leading-relaxed">{modalConfig.message}</p>
@@ -406,7 +412,7 @@
                          <button onClick={() => setActiveTab('addClient')} className="bg-blue-600 p-6 rounded-2xl shadow-md text-white hover:bg-blue-700 transition-all flex flex-col justify-center items-center gap-2"><PlusCircle size={32} /><span className="font-bold">Tạo hồ sơ mới</span></button>
                        </div>
                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                         <div className="p-5 border-b border-slate-100 bg-amber-50 flex items-center gap-3"><BellRing className="text-amber-600" size={24} /><h3 className="font-bold text-lg text-amber-900">Chuông Báo Hệ Thống</h3></div>
+                         <div className="p-5 border-b border-slate-100 bg-amber-50 flex items-center gap-3"><BellRing size={24} className="text-amber-600" /><h3 className="font-bold text-lg text-amber-900">Chuông Báo Hệ Thống</h3></div>
                          <div className="p-6">
                            {systemWarnings.length > 0 ? (
                              <div className="grid gap-4">
@@ -437,7 +443,7 @@
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
-                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">Nhóm đối tượng</th><th className="p-4 font-bold">Mức Rủi Ro</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
+                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">Mức Rủi Ro</th><th className="p-4 font-bold">Mức Can Thiệp</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
                           <tbody>
                             {filteredClients.length > 0 ? filteredClients.map((client) => (
                               <tr key={client.id} className={`border-b border-slate-100 ${client.status === 'Đã đóng ca' ? 'bg-slate-50 opacity-75' : 'hover:bg-blue-50/50'}`}>
@@ -446,7 +452,8 @@
                                   {client.avatar ? <img src={client.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm"/> : <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">{client.alias.charAt(0)}</div>}
                                   {client.alias}
                                 </td>
-                                <td className="p-4 text-slate-600">{client.category}</td><td className="p-4">{getRiskBadge(client.riskLevel)}</td>
+                                <td className="p-4">{getRiskBadge(client.riskLevel)}</td>
+                                <td className="p-4">{getInterventionBadge(client.interventionLevel)}</td>
                                 <td className="p-4 text-center">
                                   <div className="flex items-center justify-center gap-2">
                                     <button onClick={() => navToClientDetail(client)} className={`px-4 py-2 rounded-lg font-bold text-sm flex-1 ${client.status === 'Đã đóng ca' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'}`}>{client.status === 'Đã đóng ca' ? 'Xem Lại' : 'Can thiệp'}</button>
@@ -464,7 +471,7 @@
                   {activeTab === 'addClient' && (
                     <div className="max-w-5xl mx-auto space-y-6 animate-in">
                       <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 overflow-hidden">
-                        <div className="p-5 border-b border-indigo-100 bg-white/60"><div className="flex items-center gap-3 text-indigo-800"><Sparkles className="text-indigo-500" size={24} /><div><h3 className="font-bold text-lg">AI Phân Tích Báo Cáo Thô</h3></div></div></div>
+                        <div className="p-5 border-b border-indigo-100 bg-white/60"><div className="flex items-center gap-3 text-indigo-800"><Sparkles size={24} className="text-indigo-500" /><div><h3 className="font-bold text-lg">AI Phân Tích Báo Cáo Thô</h3></div></div></div>
                         <div className="p-6">
                           <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-indigo-300 rounded-xl bg-white p-8 text-center cursor-pointer hover:bg-indigo-50 mb-4">
                             <input type="file" ref={fileInputRef} className="hidden" accept=".txt,.doc,.docx" onChange={handleFileUpload} />
@@ -483,12 +490,20 @@
                             <div className="flex flex-col sm:flex-row gap-6 mb-6">
                               <div className="flex flex-col items-center gap-2">
                                 <div className="relative group cursor-pointer w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-                                  {newClient.avatar ? <img src={newClient.avatar} className="w-full h-full object-cover" /> : <Camera className="text-slate-400" size={32} />}
+                                  {newClient.avatar ? <img src={newClient.avatar} className="w-full h-full object-cover" /> : <Camera size={32} className="text-slate-400" />}
                                   <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleAvatarUpload(e, setNewClient, newClient)} />
                                 </div>
                               </div>
                               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div><label className="block text-sm font-bold mb-2">Bí danh *</label><input type="text" value={newClient.alias} onChange={(e) => setNewClient({...newClient, alias: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
+                                <div><label className="block text-sm font-bold mb-2">Mức độ can thiệp</label>
+                                    <select value={newClient.interventionLevel} onChange={(e) => setNewClient({...newClient, interventionLevel: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none">
+                                        <option value="Can thiệp Khẩn cấp">Can thiệp Khẩn cấp</option>
+                                        <option value="Can thiệp Chuyên sâu">Can thiệp Chuyên sâu</option>
+                                        <option value="Hỗ trợ Cơ bản">Hỗ trợ Cơ bản</option>
+                                        <option value="Phòng ngừa/Theo dõi">Phòng ngừa/Theo dõi</option>
+                                    </select>
+                                </div>
                                 <div><label className="block text-sm font-bold mb-2">Độ tuổi</label><input type="number" value={newClient.age} onChange={(e) => setNewClient({...newClient, age: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Nhóm vấn đề</label><input type="text" value={newClient.category} onChange={(e) => setNewClient({...newClient, category: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Số điện thoại</label><input type="text" value={newClient.phone} onChange={(e) => setNewClient({...newClient, phone: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
@@ -529,7 +544,7 @@
                           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-100 flex-shrink-0 bg-blue-50 flex items-center justify-center">
                             {selectedClient.avatar ? <img src={selectedClient.avatar} className="w-full h-full object-cover" /> : <span className="font-black text-2xl text-blue-700">{selectedClient.alias.charAt(0)}</span>}
                           </div>
-                          <div><h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">Hồ sơ: {selectedClient.id} {getRiskBadge(selectedClient.riskLevel)}</h2><p className="text-slate-500 font-medium mt-1">Bí danh: {selectedClient.alias} • Nhóm: {selectedClient.category}</p></div>
+                          <div><h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">Hồ sơ: {selectedClient.id} {getInterventionBadge(selectedClient.interventionLevel)}</h2><p className="text-slate-500 font-medium mt-1">Bí danh: {selectedClient.alias} • Nhóm: {selectedClient.category}</p></div>
                         </div>
                         <div className="text-right"><p className="text-sm text-slate-500 font-bold">Trạng thái</p><span className="inline-block mt-1 px-3 py-1 bg-slate-800 text-white text-sm font-bold rounded-full">{selectedClient.status}</span></div>
                       </div>
@@ -557,13 +572,21 @@
                               
                               {!isEditingInfo ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID:</strong> {selectedClient.id}</li><li><strong>Bí danh:</strong> {selectedClient.alias}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Nhóm:</strong> {selectedClient.category}</li></ul></div>
+                                  <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4><ul className="space-y-3 text-slate-600"><li><strong>Mã ID:</strong> {selectedClient.id}</li><li><strong>Bí danh:</strong> {selectedClient.alias}</li><li><strong>Độ tuổi:</strong> {selectedClient.age}</li><li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li></ul></div>
                                   <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family}</p></div>
                                 </div>
                               ) : (
                                 <div className="flex flex-col sm:flex-row gap-6 bg-slate-50 p-6 rounded-2xl border border-blue-100">
                                   <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div><label className="block text-sm font-bold mb-1">Bí danh</label><input type="text" value={editInfoData.alias} onChange={(e) => setEditInfoData({...editInfoData, alias: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                    <div><label className="block text-sm font-bold mb-1">Mức can thiệp</label>
+                                        <select value={editInfoData.interventionLevel} onChange={(e) => setEditInfoData({...editInfoData, interventionLevel: e.target.value})} className="w-full p-2 border rounded-lg">
+                                            <option value="Can thiệp Khẩn cấp">Can thiệp Khẩn cấp</option>
+                                            <option value="Can thiệp Chuyên sâu">Can thiệp Chuyên sâu</option>
+                                            <option value="Hỗ trợ Cơ bản">Hỗ trợ Cơ bản</option>
+                                            <option value="Phòng ngừa/Theo dõi">Phòng ngừa/Theo dõi</option>
+                                        </select>
+                                    </div>
                                     <div><label className="block text-sm font-bold mb-1">Độ tuổi</label><input type="text" value={editInfoData.age} onChange={(e) => setEditInfoData({...editInfoData, age: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Gia đình</label><textarea rows={3} value={editInfoData.family} onChange={(e) => setEditInfoData({...editInfoData, family: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
                                   </div>
