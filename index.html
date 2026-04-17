@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartCase VN - Quản lý Ca CTXH</title>
     
+    <!-- Bộ Bắt Lỗi Toàn Cục: Bắt lỗi và hiển thị thẳng lên màn hình thay vì màn hình trắng -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.body.innerHTML = `
+                <div style="padding: 40px; font-family: monospace; line-height: 1.6; background-color: #fef2f2; color: #991b1b; height: 100vh;">
+                    <h2 style="color: #dc2626; border-bottom: 2px solid #fca5a5; padding-bottom: 10px;">⚠️ Ứng dụng gặp sự cố (Crash)</h2>
+                    <p><b>Lỗi:</b> ${message}</p>
+                    <p><b>Nguồn:</b> ${source}</p>
+                    <p><b>Dòng:</b> ${lineno} - <b>Cột:</b> ${colno}</p>
+                    <br/>
+                    <p><i>Hãy copy toàn bộ thông báo này gửi cho AI để sửa lỗi ngay lập tức!</i></p>
+                </div>
+            `;
+            return true;
+        };
+    </script>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -34,10 +51,34 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
     
-    <div id="root"></div>
+    <div id="root">
+        <!-- Hiệu ứng tải trang trong lúc chờ Babel dịch code -->
+        <div class="flex flex-col items-center justify-center h-screen bg-slate-50">
+            <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <p class="mt-4 text-slate-500 font-medium">Đang tải ứng dụng...</p>
+        </div>
+    </div>
 
     <script type="text/babel">
-        // 1. LẤY CÁC HÀM TỪ GLOBAL (Thay cho import)
+        // Bắt lỗi bên trong quá trình React render
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, errorInfo: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, errorInfo: error.toString() }; }
+            componentDidCatch(error, errorInfo) { console.error("React Error:", error, errorInfo); }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="p-10 bg-red-50 text-red-800 h-screen font-mono">
+                            <h2 className="text-2xl font-bold mb-4 text-red-600">⚠️ Lỗi Giao Diện React</h2>
+                            <p className="bg-white p-4 border border-red-200 rounded shadow-sm">{this.state.errorInfo}</p>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        // 1. LẤY CÁC HÀM TỪ GLOBAL
         const { useState, useRef, useEffect } = React;
         const { 
           LayoutDashboard, Users, FileText, AlertTriangle, Search, PlusCircle, 
@@ -633,7 +674,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<CaseManagementDemo />);
+        root.render(<ErrorBoundary><CaseManagementDemo /></ErrorBoundary>);
     </script>
 </body>
 </html>
