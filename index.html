@@ -27,6 +27,9 @@
     
     <!-- Babel (Biên dịch JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Mammoth.js (Thư viện đọc file .docx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
     
@@ -163,45 +166,8 @@
           );
         };
 
-        // 5. MOCK DATA
-        const initialClients = [
-          { 
-            id: 'TE-001', alias: 'L.T.H', age: 16, category: 'Bạo lực gia đình / Bỏ học', 
-            riskScore: 16, riskLevel: 'Khẩn cấp', interventionLevel: 'Can thiệp Khẩn cấp', 
-            lastVisit: addDays(-2), status: 'Đang can thiệp',
-            phone: '090xxxxxxx', address: 'Quận 4, TP.HCM', avatar: null,
-            details: {
-              family: 'Sống với bà ngoại (70 tuổi, yếu). Mẹ đơn thân đi làm xa. Dượng ruột hay say xỉn bạo hành.', history: 'Từng nhập viện do chấn thương phần mềm năm 2025.',
-              swot: {
-                S: ['Rất thương bà ngoại', 'Có năng khiếu vẽ', 'Mong muốn tự lập'], W: ['Suy dinh dưỡng nhẹ', 'Tâm lý lo âu', 'Kỹ năng đối phó kém'],
-                O: ['Chính quyền quan tâm', 'Có lớp học nghề miễn phí'], T: ['Dượng ruột đe dọa', 'Nguy cơ tệ nạn']
-              },
-              goals: [
-                { 
-                  id: 1, text: 'Kiểm soát hoảng loạn tâm lý', status: 'Đang tiến hành', deadline: addDays(10), 
-                  kpi: { baseline: 8, current: 3, target: 1, unit: 'Cơn/Tuần', history: [{ date: addDays(-20), value: 8 }, { date: addDays(-15), value: 5 }, { date: addDays(-10), value: 6 }, { date: addDays(-2), value: 3 }] } 
-                },
-                { 
-                  id: 2, text: 'Tham vấn trị liệu tâm lý', status: 'Đang tiến hành', deadline: addDays(2), 
-                  kpi: { baseline: 0, current: 3, target: 5, unit: 'Buổi', history: [{ date: addDays(-15), value: 0 }, { date: addDays(-10), value: 1 }, { date: addDays(-5), value: 2 }, { date: addDays(-2), value: 3 }] } 
-                }
-              ],
-              referrals: [{ org: 'Hội LHPN Quận 4', service: 'Hỗ trợ pháp lý / Cách ly', status: 'Đã kết nối', date: addDays(-7), icon: Scale }],
-              timeline: [{ date: addDays(-2), event: 'Lượng giá: Thân chủ có tiến bộ trong việc kiểm soát hoảng loạn.' }]
-            }
-          },
-          { 
-            id: 'PN-042', alias: 'T.T.B', age: 35, category: 'Mẹ đơn thân/Nghèo', 
-            riskScore: 8, riskLevel: 'Trung bình', interventionLevel: 'Hỗ trợ Cơ bản', 
-            lastVisit: addDays(-10), status: 'Theo dõi',
-            phone: '098xxxxxxx', address: 'Quận 8, TP.HCM', avatar: null,
-            details: { 
-              family: 'Nuôi 2 con nhỏ. Chồng ly hôn.', history: 'Khỏe mạnh.', swot: { S: ['Chăm chỉ'], W: ['Học vấn thấp'], O: ['Vay vốn'], T: ['Lạm phát'] },
-              goals: [{ id: 4, text: 'Tăng thu nhập', status: 'Đang tiến hành', deadline: addDays(-1), kpi: { baseline: 3, current: 4, target: 6, unit: 'Triệu', history: [{date: addDays(-30), value: 3}, {date: addDays(-10), value: 4}] } }], 
-              referrals: [], timeline: [] 
-            }
-          }
-        ];
+        // 5. MOCK DATA TRỐNG (Đã xóa 2 mẫu cũ)
+        const initialClients = [];
 
         // 6. MAIN COMPONENT
         function CaseManagementDemo() {
@@ -331,9 +297,11 @@
           const handleCloseCase = () => showConfirm('Đóng ca', 'Hành động này sẽ lưu trữ hồ sơ.', () => { updateClientInState({ ...selectedClient, status: 'Đã đóng ca', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Tiến hành lượng giá cuối kỳ. Đóng ca.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã đóng ca!', 'success'); setActiveTab('clients'); });
           const handleReopenCase = () => showConfirm('Mở lại hồ sơ', 'Bạn muốn mở lại hồ sơ này?', () => { updateClientInState({ ...selectedClient, status: 'Đang can thiệp', details: { ...selectedClient.details, timeline: [{ date: new Date().toLocaleDateString('vi-VN'), event: 'Hồ sơ được mở lại.' }, ...(selectedClient.details.timeline||[])] } }); showAlert('Thành công', 'Đã mở lại hồ sơ!', 'success'); });
 
+          // HÀM GỌI API GEMINI (AI)
           const runGeminiExtraction = async (textToProcess) => {
-            setIsExtractingInfo(true); setExtractError(''); const apiKey = ""; 
-            const prompt = `NVCTXH. Phân tích SWOT JSON. Ẩn danh. {alias, age, category, interventionLevel (chọn 1 trong 4: Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi), phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
+            setIsExtractingInfo(true); setExtractError(''); 
+            const apiKey = ""; 
+            const prompt = `NVCTXH. Phân tích văn bản JSON. Ẩn danh. {alias, age, category, interventionLevel (chọn 1 trong 4: Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi), phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
             try {
               let response; let retries = 0; const delays = [1000, 2000, 4000];
               while (retries < 3) {
@@ -342,14 +310,51 @@
               }
               if (!response?.ok) throw new Error('Net failed');
               const data = await response.json();
-              try { setNewClient(prev => ({ ...prev, ...JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}") })); } catch (e) { setExtractError('Lỗi định dạng.'); }
-            } catch (error) { setExtractError('Lỗi AI.'); } finally { setIsExtractingInfo(false); }
+              try { setNewClient(prev => ({ ...prev, ...JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}") })); } catch (e) { setExtractError('Lỗi định dạng JSON trả về.'); }
+            } catch (error) { setExtractError('Lỗi kết nối AI. Vui lòng kiểm tra API Key nếu bạn đang chạy trên Vercel.'); } finally { setIsExtractingInfo(false); }
           };
           const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung.'); return; } runGeminiExtraction(rawNotes); };
+          
+          // ĐÃ CẬP NHẬT: ĐỌC FILE WORD THẬT SỰ BẰNG MAMMOTH.JS
           const handleFileUpload = (e) => { 
-            const file = e.target.files[0]; if (!file) return; setIsExtractingInfo(true); setExtractError(''); 
-            if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) { setTimeout(() => { setRawNotes(`[FILE: ${file.name}]\nHôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly khẩn cấp.`); runGeminiExtraction(`Hôm nay gặp L.T.H, 16 tuổi. Bỏ học do dượng bạo hành. Trầm cảm nhưng thích vẽ. Cần cách ly khẩn cấp.`); }, 1500); } 
-            else { const reader = new FileReader(); reader.onload = async (e) => { setRawNotes(e.target.result); await runGeminiExtraction(e.target.result); }; reader.readAsText(file); } 
+            const file = e.target.files[0]; 
+            if (!file) return; 
+            setIsExtractingInfo(true); 
+            setExtractError(''); 
+            
+            if (file.name.endsWith('.docx')) { 
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const arrayBuffer = event.target.result;
+                    if(window.mammoth) {
+                        window.mammoth.extractRawText({arrayBuffer: arrayBuffer})
+                            .then(async function(result) {
+                                const text = result.value;
+                                setRawNotes(text);
+                                await runGeminiExtraction(text);
+                            })
+                            .catch(function(err) {
+                                setExtractError('Lỗi đọc file DOCX: ' + err.message);
+                                setIsExtractingInfo(false);
+                            });
+                    } else {
+                        setExtractError('Thư viện đọc DOCX chưa sẵn sàng.');
+                        setIsExtractingInfo(false);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } 
+            else if (file.name.endsWith('.txt')) { 
+                const reader = new FileReader(); 
+                reader.onload = async (e) => { 
+                    setRawNotes(e.target.result); 
+                    await runGeminiExtraction(e.target.result); 
+                }; 
+                reader.readAsText(file); 
+            } else {
+                setExtractError('Chỉ hỗ trợ tải lên file .txt hoặc .docx');
+                setIsExtractingInfo(false);
+            }
           };
           
           const handleSaveNewClient = () => {
@@ -475,9 +480,12 @@
                         <div className="p-6">
                           <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-indigo-300 rounded-xl bg-white p-8 text-center cursor-pointer hover:bg-indigo-50 mb-4">
                             <input type="file" ref={fileInputRef} className="hidden" accept=".txt,.doc,.docx" onChange={handleFileUpload} />
-                            <div className="flex flex-col items-center justify-center text-indigo-600">{isExtractingInfo ? (<><Loader2 size={48} className="animate-spin mb-3 text-indigo-500" /><h4 className="font-bold">Đang xử lý...</h4></>) : (<><UploadCloud size={48} className="mb-3" /><h4 className="font-bold">Nhấn Tải File Báo Cáo</h4></>)}</div>
+                            <div className="flex flex-col items-center justify-center text-indigo-600">{isExtractingInfo ? (<><Loader2 size={48} className="animate-spin mb-3 text-indigo-500" /><h4 className="font-bold">Đang xử lý...</h4></>) : (<><UploadCloud size={48} className="mb-3" /><h4 className="font-bold">Nhấn tải File Word (.docx) hoặc dán văn bản</h4></>)}</div>
                           </div>
-                          <div className="relative"><textarea rows={3} value={rawNotes} onChange={(e) => setRawNotes(e.target.value)} placeholder="Hoặc dán văn bản trực tiếp..." className="w-full p-3 rounded-xl border border-indigo-200 outline-none" disabled={isExtractingInfo}/></div>
+                          <div className="relative">
+                            <textarea rows={3} value={rawNotes} onChange={(e) => setRawNotes(e.target.value)} placeholder="Hoặc dán văn bản trực tiếp..." className="w-full p-3 rounded-xl border border-indigo-200 outline-none" disabled={isExtractingInfo}/>
+                            {extractError && <p className="text-red-500 text-sm mt-2">{extractError}</p>}
+                          </div>
                           <div className="mt-4 flex justify-between items-center"><button onClick={handleAutoFillNotes} disabled={isExtractingInfo || !rawNotes} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2"><Bot size={18} /> Phân tích tự động</button></div>
                         </div>
                       </div>
