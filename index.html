@@ -166,7 +166,7 @@
           );
         };
 
-        // 5. MOCK DATA TRỐNG (Đã xóa 2 mẫu cũ)
+        // 5. MOCK DATA TRỐNG
         const initialClients = [];
 
         // 6. MAIN COMPONENT
@@ -225,20 +225,14 @@
           };
           
           const systemWarnings = clients.flatMap(c => c.status !== 'Đã đóng ca' ? (c.details?.goals || []).map(g => ({ client: c, goal: g, warn: getGoalWarning(g.deadline, g.status) })).filter(w => w.warn) : []);
-          
-          const getRiskBadge = (level) => {
-            if(level === 'Khẩn cấp') return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><AlertTriangle size={12}/> Khẩn cấp</span>;
-            if(level === 'Trung bình') return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><Clock size={12}/> Trung bình</span>;
-            return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-1 w-max"><CheckCircle size={12}/> Thấp</span>;
-          };
 
           const getInterventionBadge = (level) => {
             switch(level) {
-                case 'Can thiệp Khẩn cấp': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold w-max">Khẩn cấp</span>;
-                case 'Can thiệp Chuyên sâu': return <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-bold w-max">Chuyên sâu</span>;
-                case 'Hỗ trợ Cơ bản': return <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded text-xs font-bold w-max">Cơ bản</span>;
-                case 'Phòng ngừa/Theo dõi': return <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-bold w-max">Phòng ngừa</span>;
-                default: return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-bold w-max">{level || 'Chưa phân loại'}</span>;
+                case 'Can thiệp Khẩn cấp': return <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold flex items-center gap-1 w-max">🔴 Khẩn cấp</span>;
+                case 'Can thiệp Chuyên sâu': return <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold flex items-center gap-1 w-max">🟣 Chuyên sâu</span>;
+                case 'Hỗ trợ Cơ bản': return <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold flex items-center gap-1 w-max">🔵 Cơ bản</span>;
+                case 'Phòng ngừa/Theo dõi': return <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1 w-max">🟢 Phòng ngừa</span>;
+                default: return <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold flex items-center gap-1 w-max">{level || 'Chưa phân loại'}</span>;
             }
           };
 
@@ -300,7 +294,7 @@
           // HÀM GỌI API GEMINI (AI)
           const runGeminiExtraction = async (textToProcess) => {
             setIsExtractingInfo(true); setExtractError(''); 
-            const apiKey = ""; 
+            const apiKey = ""; // <--- BẠN CẦN ĐIỀN API KEY VÀO ĐÂY KHI LÊN VERCEL
             const prompt = `NVCTXH. Phân tích văn bản JSON. Ẩn danh. {alias, age, category, interventionLevel (chọn 1 trong 4: Can thiệp Khẩn cấp, Can thiệp Chuyên sâu, Hỗ trợ Cơ bản, Phòng ngừa/Theo dõi), phone, address, family, history, swot_S, swot_W, swot_O, swot_T}. Text: "${textToProcess}"`;
             try {
               let response; let retries = 0; const delays = [1000, 2000, 4000];
@@ -315,7 +309,7 @@
           };
           const handleAutoFillNotes = () => { if (!rawNotes.trim()) { setExtractError('Vui lòng nhập nội dung.'); return; } runGeminiExtraction(rawNotes); };
           
-          // ĐÃ CẬP NHẬT: ĐỌC FILE WORD THẬT SỰ BẰNG MAMMOTH.JS
+          // ĐỌC FILE WORD THẬT SỰ BẰNG MAMMOTH.JS
           const handleFileUpload = (e) => { 
             const file = e.target.files[0]; 
             if (!file) return; 
@@ -362,7 +356,7 @@
             const todayStr = new Date().toLocaleDateString('vi-VN');
             const processArr = (val) => Array.isArray(val) ? val : (val ? val.split('\n').filter(i=>i.trim()) : ['Chưa cập nhật']);
             setClients([{ 
-              id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, alias: newClient.alias, age: newClient.age || 'N/A', category: newClient.category || 'Chưa phân loại', interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', riskScore: 0, riskLevel: 'Chưa đánh giá', lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
+              id: `KH-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, alias: newClient.alias, age: newClient.age || 'N/A', category: newClient.category || 'Chưa phân loại', interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', lastVisit: todayStr, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
               details: { family: newClient.family || 'Chưa thu thập', history: newClient.history || 'Chưa thu thập', swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, goals: [], referrals: [], timeline: [{ date: todayStr, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
             setNewClient({ alias: '', age: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '' }); setRawNotes(''); showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); setActiveTab('clients');
@@ -413,7 +407,7 @@
                      <div className="space-y-6 animate-in">
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500"><h3 className="text-sm text-slate-500 font-bold">Đang quản lý</h3><p className="text-3xl font-black text-slate-800 mt-2">{clients.filter(c => c.status !== 'Đã đóng ca').length}</p></div>
-                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-red-500"><h3 className="text-sm text-slate-500 font-bold">Báo động Khẩn cấp</h3><p className="text-3xl font-black text-red-600 mt-2">{clients.filter(c => c.riskLevel === 'Khẩn cấp' && c.status !== 'Đã đóng ca').length}</p></div>
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-red-500"><h3 className="text-sm text-slate-500 font-bold">Báo động Khẩn cấp</h3><p className="text-3xl font-black text-red-600 mt-2">{clients.filter(c => c.interventionLevel === 'Can thiệp Khẩn cấp' && c.status !== 'Đã đóng ca').length}</p></div>
                          <button onClick={() => setActiveTab('addClient')} className="bg-blue-600 p-6 rounded-2xl shadow-md text-white hover:bg-blue-700 transition-all flex flex-col justify-center items-center gap-2"><PlusCircle size={32} /><span className="font-bold">Tạo hồ sơ mới</span></button>
                        </div>
                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -448,7 +442,7 @@
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
-                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">Mức Rủi Ro</th><th className="p-4 font-bold">Mức Can Thiệp</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
+                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">Nhóm đối tượng</th><th className="p-4 font-bold">Mức Can Thiệp</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
                           <tbody>
                             {filteredClients.length > 0 ? filteredClients.map((client) => (
                               <tr key={client.id} className={`border-b border-slate-100 ${client.status === 'Đã đóng ca' ? 'bg-slate-50 opacity-75' : 'hover:bg-blue-50/50'}`}>
@@ -457,7 +451,7 @@
                                   {client.avatar ? <img src={client.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm"/> : <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">{client.alias.charAt(0)}</div>}
                                   {client.alias}
                                 </td>
-                                <td className="p-4">{getRiskBadge(client.riskLevel)}</td>
+                                <td className="p-4 text-slate-600">{client.category}</td>
                                 <td className="p-4">{getInterventionBadge(client.interventionLevel)}</td>
                                 <td className="p-4 text-center">
                                   <div className="flex items-center justify-center gap-2">
