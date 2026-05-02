@@ -544,7 +544,20 @@
                                             </div>
                                         ) : (
                                             <div className="animate-in fade-in">
-                                                <div className="bg-slate-50 p-6 rounded-xl border-2 border-slate-300 shadow-sm mb-6">{renderInfoForm(editInfo, setEditInfo)}</div>
+                                                <div className="bg-slate-50 p-6 rounded-xl border-2 border-slate-300 shadow-sm mb-6">
+                                                    <div className="flex flex-col md:flex-row gap-6 mb-6">
+                                                        <div className="flex flex-col items-center shrink-0 w-28">
+                                                            <div className="w-24 h-24 rounded-full bg-white border-4 border-slate-300 shadow-sm flex items-center justify-center overflow-hidden relative group cursor-pointer">
+                                                                {editInfo.avatar?<img src={editInfo.avatar} className="w-full h-full object-cover"/>:<Camera size={28} className="text-slate-400"/>}
+                                                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>handleAvatar(e,setEditInfo,editInfo)}/>
+                                                                <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs font-bold transition-all">Đổi Ảnh</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            {renderInfoForm(editInfo, setEditInfo)}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <div className="bg-indigo-50 p-6 rounded-xl border-2 border-indigo-200">
                                                     <div className="flex justify-between items-center mb-4"><h4 className="font-bold text-indigo-900 flex items-center gap-2 text-base"><Paperclip size={18}/> Quản lý Tài liệu</h4><input type="file" multiple id="edit-docs" className="hidden" onChange={e=>handleDocs(e,setEditInfo)}/><label htmlFor="edit-docs" className="bg-white border-2 border-indigo-300 text-indigo-800 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer hover:bg-indigo-100 shadow-sm transition-colors">+ Thêm Tệp</label></div>
                                                     <DocList docs={editInfo.documents} onRm={i=>handleRemoveDoc(i,setEditInfo)}/>
@@ -733,7 +746,7 @@
                                 {/* TAB 5: EVALUATION */}
                                 {detailSubTab==='evaluation' && (
                                     <div className="animate-in fade-in">
-                                        <div className="flex justify-between items-center mb-6">
+                                        <div className="flex justify-between items-center mb-8">
                                             <h3 className="font-bold text-lg text-slate-800 border-b-2 border-slate-200 pb-2">Lượng giá Tiến trình</h3>
                                             {selectedClient.status !== 'Đã đóng ca' ? (
                                                 <button onClick={handleCloseCase} className="bg-slate-800 border-2 border-slate-900 hover:bg-slate-900 transition-colors text-white shadow-sm font-bold px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm"><CheckCircle size={18}/> ĐÓNG CA</button>
