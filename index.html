@@ -115,6 +115,7 @@
         const Camera = (p) => <TextIcon symbol="📷" {...p} />;
         const ArrowUp = (p) => <TextIcon symbol="⬆️" {...p} />;
         const ArrowDown = (p) => <TextIcon symbol="⬇️" {...p} />;
+        const Paperclip = (p) => <TextIcon symbol="📎" {...p} />;
 
         // 3. HELPERS
         const today = new Date();
@@ -234,8 +235,8 @@
           const [isEditingEvalNote, setIsEditingEvalNote] = useState(false);
           const [evalNoteData, setEvalNoteData] = useState('');
 
-          // Thêm Khuyết tật, Ngày ghi nhận, Vấn đề vào Khởi tạo
-          const [newClient, setNewClient] = useState({ fullName: '', studentId: '', recordDate: getTodayYMD(), disabilityStatus: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', problems: [], swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' });
+          // Thêm Khuyết tật, Mức độ, Tài liệu
+          const [newClient, setNewClient] = useState({ fullName: '', studentId: '', recordDate: getTodayYMD(), disabilityType: '', disabilityOther: '', disabilitySeverity: 'Chưa xác định', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', problems: [], swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '', documents: [] });
           const [newProblemText, setNewProblemText] = useState('');
           
           const [rawNotes, setRawNotes] = useState('');
@@ -252,6 +253,30 @@
             const reader = new FileReader();
             reader.onload = (event) => { stateSetter({ ...currentState, avatar: event.target.result }); };
             reader.readAsDataURL(file);
+          };
+
+          // HÀM UPLOAD GIẤY TỜ LIÊN QUAN
+          const handleDocumentUpload = (e, stateSetter) => {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+            const newDocs = [];
+            let processed = 0;
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    newDocs.push({ name: file.name, type: file.type, data: event.target.result, id: Date.now() + processed });
+                    processed++;
+                    if (processed === files.length) {
+                        stateSetter(prev => ({ ...prev, documents: [...(prev.documents || []), ...newDocs] }));
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            e.target.value = null; // reset input
+          };
+
+          const handleRemoveDocument = (idToRemove, stateSetter) => {
+              stateSetter(prev => ({ ...prev, documents: prev.documents.filter(d => d.id !== idToRemove) }));
           };
 
           // HÀM HỖ TRỢ DI CHUYỂN ITEM TRONG MẢNG (SẮP XẾP ƯU TIÊN VẤN ĐỀ)
@@ -316,11 +341,15 @@
               
               setEditInfoData({ 
                   fullName: selectedClient.fullName, studentId: selectedClient.studentId, 
-                  recordDate: fmtDate, disabilityStatus: selectedClient.disabilityStatus || '',
+                  recordDate: fmtDate, 
+                  disabilityType: selectedClient.disabilityType || '', 
+                  disabilityOther: selectedClient.disabilityOther || '', 
+                  disabilitySeverity: selectedClient.disabilitySeverity || 'Chưa xác định',
                   age: selectedClient.age, ethnicity: selectedClient.ethnicity || '', religion: selectedClient.religion || '', 
                   category: selectedClient.category, interventionLevel: selectedClient.interventionLevel, 
                   phone: selectedClient.phone, address: selectedClient.address, family: selectedClient.details.family, 
-                  needs: selectedClient.details.needs || '', notes: selectedClient.details.notes || '', avatar: selectedClient.avatar 
+                  needs: selectedClient.details.needs || '', notes: selectedClient.details.notes || '', avatar: selectedClient.avatar,
+                  documents: selectedClient.documents || []
               }); 
               setIsEditingInfo(true); 
           };
@@ -328,8 +357,12 @@
             const newAlias = getAliasFromName(editInfoData.fullName);
             updateClientInState({ 
                 ...selectedClient, fullName: editInfoData.fullName, alias: newAlias, studentId: editInfoData.studentId, 
-                recordDate: formatDateToVN(editInfoData.recordDate), disabilityStatus: editInfoData.disabilityStatus,
+                recordDate: formatDateToVN(editInfoData.recordDate), 
+                disabilityType: editInfoData.disabilityType,
+                disabilityOther: editInfoData.disabilityOther,
+                disabilitySeverity: editInfoData.disabilitySeverity,
                 age: editInfoData.age, ethnicity: editInfoData.ethnicity, religion: editInfoData.religion, category: editInfoData.category, interventionLevel: editInfoData.interventionLevel, phone: editInfoData.phone, address: editInfoData.address, avatar: editInfoData.avatar, 
+                documents: editInfoData.documents,
                 details: { ...selectedClient.details, family: editInfoData.family, needs: editInfoData.needs, notes: editInfoData.notes } 
             }); 
             setIsEditingInfo(false); 
@@ -459,7 +492,8 @@
               "fullName": "Họ và tên thật của thân chủ",
               "studentId": "Mã số sinh viên (nếu có)",
               "age": "Số tuổi",
-              "disabilityStatus": "Tình trạng khuyết tật (VD: Vận động, Thị giác, Thính giác, Không có, v.v.)",
+              "disabilityType": "BẮT BUỘC CHỌN 1: Vận động / Nghe, nói / Nhìn / Thần kinh, tâm thần / Trí tuệ / Khác. (Nếu không rõ để Khác)",
+              "disabilitySeverity": "BẮT BUỘC CHỌN 1: Đặc biệt nặng / Nặng / Nhẹ / Chưa xác định",
               "ethnicity": "Dân tộc",
               "religion": "Tôn giáo",
               "category": "Nhóm đối tượng chính",
@@ -503,6 +537,12 @@
               
               try { 
                   const parsedData = JSON.parse(jsonString);
+                  // Default mapping for unmapped types
+                  const allowedTypes = ["Vận động", "Nghe, nói", "Nhìn", "Thần kinh, tâm thần", "Trí tuệ", "Khác", ""];
+                  if (parsedData.disabilityType && !allowedTypes.includes(parsedData.disabilityType)) {
+                      parsedData.disabilityOther = parsedData.disabilityType;
+                      parsedData.disabilityType = "Khác";
+                  }
                   setNewClient(prev => ({ ...prev, ...parsedData })); 
               } catch (e) { 
                   setExtractError('AI trả lời sai định dạng JSON. Bạn hãy điền thủ công.'); 
@@ -570,17 +610,20 @@
               fullName: newClient.fullName,
               alias: newAlias, 
               studentId: newClient.studentId,
-              disabilityStatus: newClient.disabilityStatus || 'Không có / Chưa rõ',
+              disabilityType: newClient.disabilityType || 'Không rõ',
+              disabilityOther: newClient.disabilityOther || '',
+              disabilitySeverity: newClient.disabilitySeverity || 'Chưa xác định',
               age: newClient.age || 'N/A', 
               ethnicity: newClient.ethnicity || 'Không rõ',
               religion: newClient.religion || 'Không rõ',
               category: newClient.category || 'Chưa phân loại', 
               interventionLevel: newClient.interventionLevel || 'Phòng ngừa/Theo dõi', 
               lastVisit: recordDateVN, status: 'Tiếp nhận mới', phone: newClient.phone, address: newClient.address, avatar: newClient.avatar,
+              documents: newClient.documents || [],
               details: { family: newClient.family || 'Chưa thu thập', needs: newClient.needs || 'Chưa ghi nhận', history: newClient.history || 'Chưa thu thập', problems: newClient.problems || [], swot: { S: processArr(newClient.swot_S), W: processArr(newClient.swot_W), O: processArr(newClient.swot_O), T: processArr(newClient.swot_T) }, notes: newClient.notes || '', evaluationNotes: '', goals: [], referrals: [], timeline: [{ date: recordDateVN, event: `Khởi tạo hồ sơ.` }] } 
             }, ...clients]);
             
-            setNewClient({ fullName: '', studentId: '', recordDate: getTodayYMD(), disabilityStatus: '', alias: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', problems: [], swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '' }); 
+            setNewClient({ fullName: '', studentId: '', recordDate: getTodayYMD(), disabilityType: '', disabilityOther: '', disabilitySeverity: 'Chưa xác định', alias: '', age: '', ethnicity: '', religion: '', category: '', phone: '', address: '', interventionLevel: 'Phòng ngừa/Theo dõi', family: '', history: '', needs: '', problems: [], swot_S: '', swot_W: '', swot_O: '', swot_T: '', avatar: '', notes: '', documents: [] }); 
             setRawNotes(''); 
             showAlert('Thành công', 'Đã lưu Hồ sơ mới.', 'success'); 
             setActiveTab('clients');
@@ -597,7 +640,8 @@
                   (c.studentId || '').toLowerCase().includes(lowerQ) ||
                   String(c.age || '').includes(lowerQ) ||
                   (c.category || '').toLowerCase().includes(lowerQ) ||
-                  (c.disabilityStatus || '').toLowerCase().includes(lowerQ) ||
+                  (c.disabilityType || '').toLowerCase().includes(lowerQ) ||
+                  (c.disabilityOther || '').toLowerCase().includes(lowerQ) ||
                   (c.address || '').toLowerCase().includes(lowerQ) ||
                   (c.phone || '').includes(lowerQ) ||
                   (c.interventionLevel || '').toLowerCase().includes(lowerQ) ||
@@ -706,7 +750,7 @@
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
-                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">MSSV</th><th className="p-4 font-bold">Nhóm đối tượng</th><th className="p-4 font-bold">Mức Can Thiệp</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
+                          <thead><tr className="bg-slate-50 text-sm text-slate-500 uppercase"><th className="p-4 font-bold">Mã Thân Chủ</th><th className="p-4 font-bold">Bí danh</th><th className="p-4 font-bold">MSSV</th><th className="p-4 font-bold">Khuyết tật</th><th className="p-4 font-bold">Nhóm đối tượng</th><th className="p-4 font-bold">Mức Can Thiệp</th><th className="p-4 font-bold text-center">Thao tác</th></tr></thead>
                           <tbody>
                             {filteredClients.length > 0 ? filteredClients.map((client) => (
                               <tr key={client.id} className={`border-b border-slate-100 ${client.status === 'Đã đóng ca' ? 'bg-slate-50 opacity-75' : 'hover:bg-blue-50/50'}`}>
@@ -716,6 +760,7 @@
                                   {client.alias} {/* Chỉ hiển thị bí danh bên ngoài bảng */}
                                 </td>
                                 <td className="p-4 font-medium text-slate-600">{client.studentId || 'N/A'}</td>
+                                <td className="p-4 text-slate-600 text-sm font-medium">{client.disabilityType === 'Khác' ? client.disabilityOther : (client.disabilityType || 'N/A')}</td>
                                 <td className="p-4 text-slate-600">{client.category}</td>
                                 <td className="p-4">{getInterventionBadge(client.interventionLevel)}</td>
                                 <td className="p-4 text-center">
@@ -775,7 +820,43 @@
                                         <option value="Phòng ngừa/Theo dõi">Phòng ngừa/Theo dõi</option>
                                     </select>
                                 </div>
-                                <div className="md:col-span-2"><label className="block text-sm font-bold mb-2 text-red-700">Tình trạng khuyết tật</label><input type="text" value={newClient.disabilityStatus} onChange={(e) => setNewClient({...newClient, disabilityStatus: e.target.value})} className="w-full p-3 border rounded-xl bg-red-50 outline-none" placeholder="VD: Vận động, Thị giác, Thính giác..." /></div>
+                                
+                                <div>
+                                    <label className="block text-sm font-bold mb-2 text-red-700">Loại khuyết tật</label>
+                                    <select value={newClient.disabilityType} onChange={(e) => setNewClient({...newClient, disabilityType: e.target.value})} className="w-full p-3 border rounded-xl bg-red-50 outline-none text-red-900">
+                                        <option value="">-- Chọn loại --</option>
+                                        <option value="Vận động">Vận động</option>
+                                        <option value="Nghe, nói">Nghe, nói</option>
+                                        <option value="Nhìn">Nhìn</option>
+                                        <option value="Thần kinh, tâm thần">Thần kinh, tâm thần</option>
+                                        <option value="Trí tuệ">Trí tuệ</option>
+                                        <option value="Khác">Khác</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    {newClient.disabilityType === 'Khác' ? (
+                                        <div><label className="block text-sm font-bold mb-2 text-red-700">Khuyết tật khác (Mô tả)</label><input type="text" value={newClient.disabilityOther} onChange={(e) => setNewClient({...newClient, disabilityOther: e.target.value})} className="w-full p-3 border rounded-xl bg-red-50 outline-none" placeholder="Nhập loại khuyết tật..." /></div>
+                                    ) : (
+                                        <div><label className="block text-sm font-bold mb-2 text-red-700">Mức độ khuyết tật</label>
+                                        <select value={newClient.disabilitySeverity} onChange={(e) => setNewClient({...newClient, disabilitySeverity: e.target.value})} className="w-full p-3 border rounded-xl bg-red-50 outline-none text-red-900">
+                                            <option value="Chưa xác định">Chưa xác định</option>
+                                            <option value="Nhẹ">Nhẹ</option>
+                                            <option value="Nặng">Nặng</option>
+                                            <option value="Đặc biệt nặng">Đặc biệt nặng</option>
+                                        </select></div>
+                                    )}
+                                </div>
+                                {newClient.disabilityType === 'Khác' && (
+                                    <div><label className="block text-sm font-bold mb-2 text-red-700">Mức độ khuyết tật</label>
+                                        <select value={newClient.disabilitySeverity} onChange={(e) => setNewClient({...newClient, disabilitySeverity: e.target.value})} className="w-full p-3 border rounded-xl bg-red-50 outline-none text-red-900">
+                                            <option value="Chưa xác định">Chưa xác định</option>
+                                            <option value="Nhẹ">Nhẹ</option>
+                                            <option value="Nặng">Nặng</option>
+                                            <option value="Đặc biệt nặng">Đặc biệt nặng</option>
+                                        </select>
+                                    </div>
+                                )}
                                 
                                 <div><label className="block text-sm font-bold mb-2">Độ tuổi</label><input type="number" value={newClient.age} onChange={(e) => setNewClient({...newClient, age: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" /></div>
                                 <div><label className="block text-sm font-bold mb-2">Dân tộc</label><input type="text" value={newClient.ethnicity} onChange={(e) => setNewClient({...newClient, ethnicity: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="VD: Kinh" /></div>
@@ -788,6 +869,32 @@
                                 <div className="md:col-span-3"><label className="block text-sm font-bold mb-2">Nhu cầu, mong muốn của thân chủ</label><textarea rows={2} value={newClient.needs} onChange={(e) => setNewClient({...newClient, needs: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
                                 <div className="md:col-span-3"><label className="block text-sm font-bold mb-2">Ghi chú chuyên môn (Nếu có)</label><textarea rows={2} value={newClient.notes} onChange={(e) => setNewClient({...newClient, notes: e.target.value})} className="w-full p-3 border rounded-xl bg-slate-50 outline-none" placeholder="Những lưu ý thêm trong quá trình tiếp xúc..." /></div>
                               </div>
+                            </div>
+                            
+                            {/* KHU VỰC UPLOAD TÀI LIỆU */}
+                            <div className="mt-4 p-5 bg-indigo-50 border border-indigo-100 rounded-xl">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="font-bold text-indigo-900 flex items-center gap-2"><Paperclip size={18}/> Giấy tờ liên quan (Giấy XN khuyết tật, biên bản...)</h4>
+                                    <div>
+                                        <input type="file" multiple id="doc-upload-add" className="hidden" onChange={(e) => handleDocumentUpload(e, setNewClient)} />
+                                        <label htmlFor="doc-upload-add" className="cursor-pointer px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg text-sm hover:bg-indigo-700 transition-all">+ Tải lên tệp</label>
+                                    </div>
+                                </div>
+                                {newClient.documents?.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {newClient.documents.map((doc) => (
+                                            <li key={doc.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-indigo-100 shadow-sm">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <FileType size={16} className="text-indigo-400 shrink-0"/>
+                                                    <span className="text-sm font-medium text-slate-700 truncate">{doc.name}</span>
+                                                </div>
+                                                <button onClick={() => handleRemoveDocument(doc.id, setNewClient)} className="text-slate-400 hover:text-red-500 p-1"><X size={16}/></button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-indigo-400 italic">Chưa có tài liệu nào. (Khuyến nghị nén ảnh/PDF dưới 2MB)</p>
+                                )}
                             </div>
                           </div>
 
@@ -884,51 +991,138 @@
                               </div>
                               
                               {!isEditingInfo ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div>
-                                    <h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4>
-                                    <ul className="space-y-3 text-slate-600">
-                                        <li><strong>Mã ID Hệ thống:</strong> {selectedClient.id}</li>
-                                        <li><strong>Họ và tên đầy đủ:</strong> <span className="font-bold text-blue-700">{selectedClient.fullName || selectedClient.alias}</span></li>
-                                        <li><strong>Bí danh hiển thị ngoài:</strong> {selectedClient.alias}</li>
-                                        <li><strong>Mã số sinh viên:</strong> {selectedClient.studentId || 'Chưa cập nhật'}</li>
-                                        <li><strong>Ngày ghi nhận hồ sơ:</strong> {selectedClient.recordDate || 'Chưa cập nhật'}</li>
-                                        <li><strong>Tình trạng khuyết tật:</strong> <span className="font-semibold text-red-600">{selectedClient.disabilityStatus || 'Không có / Chưa rõ'}</span></li>
-                                        <li><strong>Độ tuổi:</strong> {selectedClient.age}</li>
-                                        <li><strong>Dân tộc:</strong> {selectedClient.ethnicity || 'Không rõ'}</li>
-                                        <li><strong>Tôn giáo:</strong> {selectedClient.religion || 'Không rõ'}</li>
-                                        <li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li>
-                                    </ul>
-                                  </div>
-                                  <div className="space-y-6">
-                                    <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family || "Chưa có thông tin"}</p></div>
-                                    <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhu cầu, mong muốn</h4><p className="text-slate-600 leading-relaxed bg-blue-50 p-4 rounded-xl border border-blue-100 whitespace-pre-wrap">{selectedClient.details?.needs || "Chưa ghi nhận."}</p></div>
-                                    <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Ghi chú chuyên môn</h4><p className="text-slate-600 leading-relaxed bg-yellow-50 p-4 rounded-xl border border-yellow-100 whitespace-pre-wrap">{selectedClient.details?.notes || "Không có ghi chú."}</p></div>
-                                  </div>
+                                <div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                      <div>
+                                        <h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhân khẩu học</h4>
+                                        <ul className="space-y-3 text-slate-600">
+                                            <li><strong>Mã ID Hệ thống:</strong> {selectedClient.id}</li>
+                                            <li><strong>Họ và tên đầy đủ:</strong> <span className="font-bold text-blue-700">{selectedClient.fullName || selectedClient.alias}</span></li>
+                                            <li><strong>Bí danh hiển thị ngoài:</strong> {selectedClient.alias}</li>
+                                            <li><strong>Mã số sinh viên:</strong> {selectedClient.studentId || 'Chưa cập nhật'}</li>
+                                            <li><strong>Ngày ghi nhận hồ sơ:</strong> {selectedClient.recordDate || 'Chưa cập nhật'}</li>
+                                            <li><strong>Loại khuyết tật:</strong> <span className="font-semibold text-red-600">{selectedClient.disabilityType === 'Khác' ? selectedClient.disabilityOther : (selectedClient.disabilityType || 'Không rõ')}</span></li>
+                                            <li><strong>Mức độ khuyết tật:</strong> <span className="font-semibold text-red-600">{selectedClient.disabilitySeverity || 'Chưa xác định'}</span></li>
+                                            <li><strong>Độ tuổi:</strong> {selectedClient.age}</li>
+                                            <li><strong>Dân tộc:</strong> {selectedClient.ethnicity || 'Không rõ'}</li>
+                                            <li><strong>Tôn giáo:</strong> {selectedClient.religion || 'Không rõ'}</li>
+                                            <li><strong>Mức can thiệp:</strong> {selectedClient.interventionLevel}</li>
+                                        </ul>
+                                      </div>
+                                      <div className="space-y-6">
+                                        <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Hoàn cảnh</h4><p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{selectedClient.details?.family || "Chưa có thông tin"}</p></div>
+                                        <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Nhu cầu, mong muốn</h4><p className="text-slate-600 leading-relaxed bg-blue-50 p-4 rounded-xl border border-blue-100 whitespace-pre-wrap">{selectedClient.details?.needs || "Chưa ghi nhận."}</p></div>
+                                        <div><h4 className="font-bold text-slate-800 text-lg mb-4 border-b pb-2">Ghi chú chuyên môn</h4><p className="text-slate-600 leading-relaxed bg-yellow-50 p-4 rounded-xl border border-yellow-100 whitespace-pre-wrap">{selectedClient.details?.notes || "Không có ghi chú."}</p></div>
+                                      </div>
+                                    </div>
+
+                                    {/* LIST DOCUMENTS (VIEW MODE) */}
+                                    <div className="mt-8 border-t pt-6">
+                                        <h4 className="font-bold text-indigo-900 flex items-center gap-2 mb-4"><Paperclip size={18}/> Giấy tờ liên quan (Giấy XN khuyết tật, biên bản...)</h4>
+                                        {selectedClient.documents?.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {selectedClient.documents.map((doc) => (
+                                                    <a key={doc.id} href={doc.data} download={doc.name} className="flex items-center gap-3 bg-indigo-50 hover:bg-indigo-100 p-3 rounded-lg border border-indigo-100 transition-colors group">
+                                                        <div className="p-2 bg-white rounded shadow-sm group-hover:text-indigo-600"><FileType size={20}/></div>
+                                                        <div className="overflow-hidden">
+                                                            <p className="text-sm font-bold text-slate-700 truncate">{doc.name}</p>
+                                                            <p className="text-xs text-slate-400 mt-0.5">Nhấp để tải xuống</p>
+                                                        </div>
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-slate-500 italic">Hồ sơ này chưa đính kèm tệp tài liệu nào.</p>
+                                        )}
+                                    </div>
                                 </div>
                               ) : (
-                                <div className="flex flex-col sm:flex-row gap-6 bg-slate-50 p-6 rounded-2xl border border-blue-100">
-                                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label className="block text-sm font-bold mb-1">Họ và tên đầy đủ</label><input type="text" value={editInfoData.fullName || ''} onChange={(e) => setEditInfoData({...editInfoData, fullName: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Nguyễn Văn A" /></div>
-                                    <div><label className="block text-sm font-bold mb-1">Mã số sinh viên</label><input type="text" value={editInfoData.studentId || ''} onChange={(e) => setEditInfoData({...editInfoData, studentId: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Nhập MSSV" /></div>
-                                    <div><label className="block text-sm font-bold mb-1 text-blue-700">Ngày ghi nhận</label><input type="date" value={editInfoData.recordDate || getTodayYMD()} onChange={(e) => setEditInfoData({...editInfoData, recordDate: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
-                                    <div><label className="block text-sm font-bold mb-1 text-red-700">Tình trạng khuyết tật</label><input type="text" value={editInfoData.disabilityStatus || ''} onChange={(e) => setEditInfoData({...editInfoData, disabilityStatus: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Vận động, Thị giác..." /></div>
-                                    
-                                    <div><label className="block text-sm font-bold mb-1">Mức can thiệp</label>
-                                        <select value={editInfoData.interventionLevel} onChange={(e) => setEditInfoData({...editInfoData, interventionLevel: e.target.value})} className="w-full p-2 border rounded-lg">
-                                            <option value="Can thiệp Khẩn cấp">Can thiệp Khẩn cấp</option>
-                                            <option value="Can thiệp Chuyên sâu">Can thiệp Chuyên sâu</option>
-                                            <option value="Hỗ trợ Cơ bản">Hỗ trợ Cơ bản</option>
-                                            <option value="Phòng ngừa/Theo dõi">Phòng ngừa/Theo dõi</option>
-                                        </select>
+                                <div>
+                                    <div className="flex flex-col sm:flex-row gap-6 bg-slate-50 p-6 rounded-2xl border border-blue-100 mb-6">
+                                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div><label className="block text-sm font-bold mb-1">Họ và tên đầy đủ</label><input type="text" value={editInfoData.fullName || ''} onChange={(e) => setEditInfoData({...editInfoData, fullName: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Nguyễn Văn A" /></div>
+                                        <div><label className="block text-sm font-bold mb-1">Mã số sinh viên</label><input type="text" value={editInfoData.studentId || ''} onChange={(e) => setEditInfoData({...editInfoData, studentId: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Nhập MSSV" /></div>
+                                        <div><label className="block text-sm font-bold mb-1 text-blue-700">Ngày ghi nhận</label><input type="date" value={editInfoData.recordDate || getTodayYMD()} onChange={(e) => setEditInfoData({...editInfoData, recordDate: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-bold mb-1 text-red-700">Loại khuyết tật</label>
+                                            <select value={editInfoData.disabilityType || ''} onChange={(e) => setEditInfoData({...editInfoData, disabilityType: e.target.value})} className="w-full p-2 border rounded-lg bg-red-50 text-red-900">
+                                                <option value="">-- Chọn loại --</option>
+                                                <option value="Vận động">Vận động</option>
+                                                <option value="Nghe, nói">Nghe, nói</option>
+                                                <option value="Nhìn">Nhìn</option>
+                                                <option value="Thần kinh, tâm thần">Thần kinh, tâm thần</option>
+                                                <option value="Trí tuệ">Trí tuệ</option>
+                                                <option value="Khác">Khác</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            {editInfoData.disabilityType === 'Khác' ? (
+                                                <div><label className="block text-sm font-bold mb-1 text-red-700">Khuyết tật khác</label><input type="text" value={editInfoData.disabilityOther || ''} onChange={(e) => setEditInfoData({...editInfoData, disabilityOther: e.target.value})} className="w-full p-2 border rounded-lg bg-red-50" placeholder="Nhập loại khuyết tật..." /></div>
+                                            ) : (
+                                                <div><label className="block text-sm font-bold mb-1 text-red-700">Mức độ khuyết tật</label>
+                                                <select value={editInfoData.disabilitySeverity || ''} onChange={(e) => setEditInfoData({...editInfoData, disabilitySeverity: e.target.value})} className="w-full p-2 border rounded-lg bg-red-50 text-red-900">
+                                                    <option value="Chưa xác định">Chưa xác định</option>
+                                                    <option value="Nhẹ">Nhẹ</option>
+                                                    <option value="Nặng">Nặng</option>
+                                                    <option value="Đặc biệt nặng">Đặc biệt nặng</option>
+                                                </select></div>
+                                            )}
+                                        </div>
+                                        {editInfoData.disabilityType === 'Khác' && (
+                                            <div><label className="block text-sm font-bold mb-1 text-red-700">Mức độ khuyết tật</label>
+                                                <select value={editInfoData.disabilitySeverity || ''} onChange={(e) => setEditInfoData({...editInfoData, disabilitySeverity: e.target.value})} className="w-full p-2 border rounded-lg bg-red-50 text-red-900">
+                                                    <option value="Chưa xác định">Chưa xác định</option>
+                                                    <option value="Nhẹ">Nhẹ</option>
+                                                    <option value="Nặng">Nặng</option>
+                                                    <option value="Đặc biệt nặng">Đặc biệt nặng</option>
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div><label className="block text-sm font-bold mb-1">Mức can thiệp</label>
+                                            <select value={editInfoData.interventionLevel} onChange={(e) => setEditInfoData({...editInfoData, interventionLevel: e.target.value})} className="w-full p-2 border rounded-lg">
+                                                <option value="Can thiệp Khẩn cấp">Can thiệp Khẩn cấp</option>
+                                                <option value="Can thiệp Chuyên sâu">Can thiệp Chuyên sâu</option>
+                                                <option value="Hỗ trợ Cơ bản">Hỗ trợ Cơ bản</option>
+                                                <option value="Phòng ngừa/Theo dõi">Phòng ngừa/Theo dõi</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div><label className="block text-sm font-bold mb-1">Độ tuổi</label><input type="text" value={editInfoData.age} onChange={(e) => setEditInfoData({...editInfoData, age: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                        <div><label className="block text-sm font-bold mb-1">Dân tộc</label><input type="text" value={editInfoData.ethnicity || ''} onChange={(e) => setEditInfoData({...editInfoData, ethnicity: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Kinh" /></div>
+                                        <div><label className="block text-sm font-bold mb-1">Tôn giáo</label><input type="text" value={editInfoData.religion || ''} onChange={(e) => setEditInfoData({...editInfoData, religion: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Không" /></div>
+                                        <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Gia đình</label><textarea rows={3} value={editInfoData.family} onChange={(e) => setEditInfoData({...editInfoData, family: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+                                        <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Nhu cầu, mong muốn của thân chủ</label><textarea rows={3} value={editInfoData.needs} onChange={(e) => setEditInfoData({...editInfoData, needs: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
+                                        <div className="md:col-span-3"><label className="block text-sm font-bold mb-1">Ghi chú chuyên môn</label><textarea rows={3} value={editInfoData.notes} onChange={(e) => setEditInfoData({...editInfoData, notes: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Ghi chú thêm về ca này..." /></div>
+                                      </div>
                                     </div>
-                                    <div><label className="block text-sm font-bold mb-1">Độ tuổi</label><input type="text" value={editInfoData.age} onChange={(e) => setEditInfoData({...editInfoData, age: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
-                                    <div><label className="block text-sm font-bold mb-1">Dân tộc</label><input type="text" value={editInfoData.ethnicity || ''} onChange={(e) => setEditInfoData({...editInfoData, ethnicity: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Kinh" /></div>
-                                    <div><label className="block text-sm font-bold mb-1">Tôn giáo</label><input type="text" value={editInfoData.religion || ''} onChange={(e) => setEditInfoData({...editInfoData, religion: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="VD: Không" /></div>
-                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Gia đình</label><textarea rows={3} value={editInfoData.family} onChange={(e) => setEditInfoData({...editInfoData, family: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
-                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Nhu cầu, mong muốn của thân chủ</label><textarea rows={3} value={editInfoData.needs} onChange={(e) => setEditInfoData({...editInfoData, needs: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Thân chủ mong muốn được hỗ trợ gì?..." /></div>
-                                    <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Ghi chú chuyên môn</label><textarea rows={3} value={editInfoData.notes} onChange={(e) => setEditInfoData({...editInfoData, notes: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Ghi chú thêm về ca này..." /></div>
-                                  </div>
+
+                                    {/* LIST DOCUMENTS (EDIT MODE) */}
+                                    <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-xl">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="font-bold text-indigo-900 flex items-center gap-2"><Paperclip size={18}/> Giấy tờ liên quan (Giấy XN khuyết tật, biên bản...)</h4>
+                                            <div>
+                                                <input type="file" multiple id="doc-upload-edit" className="hidden" onChange={(e) => handleDocumentUpload(e, setEditInfoData)} />
+                                                <label htmlFor="doc-upload-edit" className="cursor-pointer px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg text-sm hover:bg-indigo-700 transition-all">+ Tải lên tệp</label>
+                                            </div>
+                                        </div>
+                                        {editInfoData.documents?.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {editInfoData.documents.map((doc) => (
+                                                    <div key={doc.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-indigo-100 shadow-sm">
+                                                        <div className="flex items-center gap-2 overflow-hidden">
+                                                            <FileType size={16} className="text-indigo-400 shrink-0"/>
+                                                            <span className="text-sm font-medium text-slate-700 truncate">{doc.name}</span>
+                                                        </div>
+                                                        <button onClick={() => handleRemoveDocument(doc.id, setEditInfoData)} className="text-slate-400 hover:text-red-500 p-1 shrink-0"><X size={16}/></button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-indigo-400 italic">Chưa có tài liệu nào.</p>
+                                        )}
+                                    </div>
                                 </div>
                               )}
                             </div>
