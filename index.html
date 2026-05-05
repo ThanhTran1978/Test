@@ -88,7 +88,7 @@
           const maxVal = Math.max(...values, target);
           const minVal = Math.min(...values, target, 0);
           const range = maxVal - minVal || 1;
-          const width = 600, height = 180, px = 40, py = 30;
+          const width = 600, height = 220, px = 40, py = 40; // Tăng height và padding để hiện rõ ngày
           const getX = (i) => px + (i * (width - 2*px) / Math.max(1, history.length - 1));
           const getY = (v) => height - py - ((v - minVal) / range) * (height - 2*py);
           const pts = history.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
@@ -107,7 +107,7 @@
                   <g key={i}>
                     <circle cx={getX(i)} cy={getY(d.value)} r="5" fill="#fff" stroke="#3b82f6" strokeWidth="2"><title>{d.date}: {d.value}</title></circle>
                     <text x={getX(i)} y={getY(d.value)-12} fill="#1e293b" fontSize="12" fontWeight="bold" textAnchor="middle">{d.value}</text>
-                    <text x={getX(i)} y={height-5} fill="#64748b" fontSize="10" fontWeight="bold" textAnchor="middle">{d.date.substring(0,5)}</text>
+                    <text x={getX(i)} y={height-10} fill="#64748b" fontSize="10" fontWeight="bold" textAnchor="middle">{d.date}</text>
                   </g>
                 ))}
               </svg>
@@ -164,6 +164,7 @@
           const [isEditAssess, setIsEditAssess] = useState(false);
           const [editAssess, setEditAssess] = useState({ S:'', W:'', O:'', T:'', problems:[] });
           const [newProbTxt, setNewProbTxt] = useState('');
+          const [newEditProblemText, setNewEditProblemText] = useState(''); // <-- THÊM KHAI BÁO NÀY
 
           const [showAddGoal, setShowAddGoal] = useState(false);
           const [newGoal, setNewGoal] = useState({ text:'', activity:'', linkedReferral:'', deadline:'', baseline:0, target:10, unit:'Điểm' });
@@ -211,7 +212,7 @@
           const Badge = ({level}) => {
             const m = {'Can thiệp Khẩn cấp':['🔴 Khẩn cấp','bg-red-50 text-red-700 border-red-300'],'Can thiệp Chuyên sâu':['🟣 Chuyên sâu','bg-purple-50 text-purple-700 border-purple-300'],'Hỗ trợ Cơ bản':['🔵 Cơ bản','bg-blue-50 text-blue-700 border-blue-300'],'Phòng ngừa/Theo dõi':['🟢 Phòng ngừa','bg-emerald-50 text-emerald-700 border-emerald-300']};
             const [t,c] = m[level] || [level||'Chưa rõ', 'bg-gray-50 text-gray-700 border-gray-300'];
-            return <span className={`px-2.5 py-1 rounded-md text-xs font-black border-2 w-max whitespace-nowrap shadow-sm ${c}`}>{t}</span>;
+            return <span className={`px-2.5 py-1 rounded-md text-xs font-bold border-2 w-max whitespace-nowrap shadow-sm ${c}`}>{t}</span>;
           };
 
           const updateClient = (upd) => { setClients(clients.map(c=>c.id===upd.id?upd:c)); setSelectedClient(upd); };
@@ -232,7 +233,9 @@
 
           const startEditingAssessment = () => {
               setEditAssess({ S: selectedClient.details.swot.S.join('\n'), W: selectedClient.details.swot.W.join('\n'), O: selectedClient.details.swot.O.join('\n'), T: selectedClient.details.swot.T.join('\n'), problems: [...(selectedClient.details.problems||[])] });
-              setNewProbTxt(''); setIsEditAssess(true);
+              setNewProbTxt('');
+              setNewEditProblemText(''); // Đảm bảo làm trống ô input khi mở lại
+              setIsEditAssess(true);
           };
           const saveEditingAssessment = () => {
               updateClient({ ...selectedClient, details: { ...selectedClient.details, problems: editAssess.problems, swot: { S: editAssess.S.split('\n').filter(i=>i.trim()), W: editAssess.W.split('\n').filter(i=>i.trim()), O: editAssess.O.split('\n').filter(i=>i.trim()), T: editAssess.T.split('\n').filter(i=>i.trim()) } } });
@@ -384,14 +387,11 @@
             <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
               {/* MODALS */}
               {modal.isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                  <div className="bg-white border-2 border-slate-300 rounded-xl p-5 max-w-sm w-full animate-in shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40">
+                  <div className="bg-white border-2 border-slate-300 rounded-xl p-6 max-w-md w-full animate-in shadow-2xl">
                     <h3 className="text-lg font-bold mb-3 text-slate-800">{modal.title}</h3>
                     <p className="mb-5 whitespace-pre-wrap text-sm text-slate-600">{modal.message}</p>
-                    <div className="flex justify-end gap-2">
-                        {modal.type==='confirm'&&<button onClick={modal.onCancel} className="px-4 py-2 bg-slate-100 font-bold text-slate-700 text-sm rounded-lg hover:bg-slate-200 border-2 border-slate-200 transition-colors">Hủy</button>}
-                        <button onClick={modal.onConfirm} className={`px-4 py-2 font-bold text-sm rounded-lg text-white border-2 transition-colors ${modal.type==='error'?'bg-red-600 border-red-700 hover:bg-red-700':'bg-blue-600 border-blue-700 hover:bg-blue-700'}`}>{modal.type==='confirm'?'Đồng ý':'Đóng'}</button>
-                    </div>
+                    <div className="flex justify-end gap-2">{modal.type==='confirm'&&<button onClick={modal.onCancel} className="px-4 py-2 bg-slate-100 font-bold text-slate-700 text-sm rounded-lg hover:bg-slate-200 border-2 border-slate-200 transition-colors">Hủy</button>}<button onClick={modal.onConfirm} className={`px-4 py-2 font-bold text-sm rounded-lg text-white border-2 transition-colors ${modal.type==='error'?'bg-red-600 border-red-700 hover:bg-red-700':'bg-blue-600 border-blue-700 hover:bg-blue-700'}`}>{modal.type==='confirm'?'Đồng ý':'Đóng'}</button></div>
                   </div>
                 </div>
               )}
