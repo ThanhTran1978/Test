@@ -88,7 +88,7 @@
           const maxVal = Math.max(...values, target);
           const minVal = Math.min(...values, target, 0);
           const range = maxVal - minVal || 1;
-          const width = 600, height = 220, px = 40, py = 40; // Tăng height và padding để hiện rõ ngày
+          const width = 600, height = 220, px = 40, py = 40; 
           const getX = (i) => px + (i * (width - 2*px) / Math.max(1, history.length - 1));
           const getY = (v) => height - py - ((v - minVal) / range) * (height - 2*py);
           const pts = history.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
@@ -200,7 +200,7 @@
                     ],
                     evaluationNotes: "Thân chủ Nguyễn Văn A rất hợp tác trong tiến trình can thiệp.\n- Về tài chính: Đã có kết quả tích cực từ Quỹ học bổng Nụ Cười.\n- Về tâm lý: Sau 2 buổi tham vấn, SV chia sẻ đã bớt căng thẳng và chủ động bắt chuyện với bạn cùng phòng.\n=> Tiếp tục duy trì kế hoạch và theo dõi tiến độ duyệt học phí của P.CTSV.",
                     timeline: [
-                        { date: "06/05/2026", event: "Cập nhật KPI: Cải thiện tâm lý, tăng cường kết nối -> 2" },
+                        { date: "06/05/2026", event: "Cập nhật đánh giá tiến độ: Cải thiện tâm lý, tăng cường kết nối -> 2" },
                         { date: "04/05/2026", event: "Quỹ Nụ Cười thông báo cấp học bổng." },
                         { date: "01/05/2026", event: "Khởi tạo hồ sơ tiếp nhận." }
                     ]
@@ -233,7 +233,7 @@
           const [isEditAssess, setIsEditAssess] = useState(false);
           const [editAssess, setEditAssess] = useState({ S:'', W:'', O:'', T:'', problems:[] });
           const [newProbTxt, setNewProbTxt] = useState('');
-          const [newEditProblemText, setNewEditProblemText] = useState(''); // <-- THÊM KHAI BÁO NÀY
+          const [newEditProblemText, setNewEditProblemText] = useState('');
 
           const [showAddGoal, setShowAddGoal] = useState(false);
           const [newGoal, setNewGoal] = useState({ text:'', activity:'', linkedReferral:[], deadline:'', baseline:0, target:10, unit:'Điểm' });
@@ -390,7 +390,39 @@
                 const d = (g.kpi.baseline<g.kpi.target&&v>=g.kpi.target)||(g.kpi.baseline>g.kpi.target&&v<=g.kpi.target);
                 return {...g, status:d?'Hoàn thành':(v!==g.kpi.baseline?'Đang tiến hành':'Chưa bắt đầu'), kpi:{...g.kpi, current:v, history:h}};
             });
-            updateClient({...selectedClient, details:{...selectedClient.details, goals:upG, timeline:[{date:fmtDate, event:`Cập nhật KPI: ${upG.find(i=>i.id===id).text} -> ${v}`}, ...(selectedClient.details.timeline||[])]}}); setUpdatingGoalId(null);
+            updateClient({...selectedClient, details:{...selectedClient.details, goals:upG, timeline:[{date:fmtDate, event:`Cập nhật đánh giá tiến độ: ${upG.find(i=>i.id===id).text} -> ${v}`}, ...(selectedClient.details.timeline||[])]}}); setUpdatingGoalId(null);
+          };
+
+          const deleteKpiHistory = (goalId, dateToRemove) => {
+            confirm('XÓA LỊCH SỬ', `Bạn có chắc chắn muốn xóa điểm đánh giá ngày ${dateToRemove}?`, () => {
+              const updatedGoals = selectedClient.details.goals.map(g => {
+                if (g.id !== goalId) return g;
+                
+                const newHistory = g.kpi.history.filter(h => h.date !== dateToRemove);
+                let newCurrent = g.kpi.baseline;
+                
+                if (newHistory.length > 0) {
+                  newHistory.sort((a, b) => parseDateStr(a.date) - parseDateStr(b.date));
+                  newCurrent = newHistory[newHistory.length - 1].value;
+                }
+                
+                const isComplete = (g.kpi.baseline < g.kpi.target && newCurrent >= g.kpi.target) || (g.kpi.baseline > g.kpi.target && newCurrent <= g.kpi.target);
+                const newStatus = isComplete ? 'Hoàn thành' : (newCurrent !== g.kpi.baseline ? 'Đang tiến hành' : 'Chưa bắt đầu');
+                
+                return { ...g, status: newStatus, kpi: { ...g.kpi, current: newCurrent, history: newHistory } };
+              });
+              
+              const todayStr = getTodayYMD().split('-').reverse().join('/');
+              updateClient({
+                ...selectedClient, 
+                details: {
+                  ...selectedClient.details, 
+                  goals: updatedGoals, 
+                  timeline: [{ date: todayStr, event: `Xóa lịch sử đánh giá ngày ${dateToRemove}` }, ...(selectedClient.details.timeline||[])]
+                }
+              });
+              alert('Thành công', 'Đã xóa lịch sử đánh giá.', 'success');
+            });
           };
 
           // REFERRALS LOGIC
@@ -796,13 +828,28 @@
                                                             </div>
                                                             
                                                             {updatingGoalId===g.id ? (
-                                                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-white p-2 rounded-xl border-2 border-blue-300 shadow-lg animate-in zoom-in-95 w-full lg:w-auto">
-                                                                    <div className="flex gap-2">
-                                                                        <div className="flex flex-col flex-1"><label className="text-[10px] font-bold text-slate-500 mb-0.5 ml-1">Ngày chấm</label><input type="date" value={kpiDate} onChange={e=>setKpiDate(e.target.value)} className="w-full p-1.5 border-2 border-slate-200 rounded-lg outline-none text-xs font-bold text-slate-800 focus:border-blue-400"/></div>
-                                                                        <div className="w-0.5 bg-slate-200 mx-1 hidden sm:block"></div>
-                                                                        <div className="flex flex-col flex-1"><label className="text-[10px] font-bold text-slate-500 mb-0.5 ml-1">Chỉ số</label><input type="number" value={kpiVal} onChange={e=>setKpiVal(e.target.value)} className="w-full p-1.5 border-2 border-blue-200 rounded-lg text-center font-bold text-blue-800 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"/></div>
+                                                                <div className="flex flex-col gap-2 w-full lg:w-auto animate-in zoom-in-95">
+                                                                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-white p-2 rounded-xl border-2 border-blue-300 shadow-lg w-full">
+                                                                        <div className="flex gap-2 w-full">
+                                                                            <div className="flex flex-col flex-1"><label className="text-[10px] font-bold text-slate-500 mb-0.5 ml-1">Ngày chấm</label><input type="date" value={kpiDate} onChange={e=>setKpiDate(e.target.value)} className="w-full p-1.5 border-2 border-slate-200 rounded-lg outline-none text-xs font-bold text-slate-800 focus:border-blue-400"/></div>
+                                                                            <div className="w-0.5 bg-slate-200 mx-1 hidden sm:block"></div>
+                                                                            <div className="flex flex-col flex-1"><label className="text-[10px] font-bold text-slate-500 mb-0.5 ml-1">Chỉ số</label><input type="number" value={kpiVal} onChange={e=>setKpiVal(e.target.value)} className="w-full p-1.5 border-2 border-blue-200 rounded-lg text-center font-bold text-blue-800 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"/></div>
+                                                                        </div>
+                                                                        <div className="flex gap-1 sm:mt-4 justify-end shrink-0"><button onClick={()=>saveKpiUpdate(g.id)} className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 border-2 border-emerald-600 text-white p-1.5 rounded-md shadow-sm transition-colors flex justify-center"><CheckCircle size={16}/></button><button onClick={()=>setUpdatingGoalId(null)} className="flex-1 sm:flex-none bg-slate-100 text-slate-600 hover:bg-slate-200 border-2 border-slate-300 p-1.5 rounded-md transition-colors flex justify-center"><X size={16}/></button></div>
                                                                     </div>
-                                                                    <div className="flex gap-1 sm:mt-4 justify-end"><button onClick={()=>saveKpiUpdate(g.id)} className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 border-2 border-emerald-600 text-white p-1.5 rounded-md shadow-sm transition-colors flex justify-center"><CheckCircle size={16}/></button><button onClick={()=>setUpdatingGoalId(null)} className="flex-1 sm:flex-none bg-slate-100 text-slate-600 hover:bg-slate-200 border-2 border-slate-300 p-1.5 rounded-md transition-colors flex justify-center"><X size={16}/></button></div>
+                                                                    {g.kpi.history && g.kpi.history.length > 0 && (
+                                                                        <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm w-full mt-1">
+                                                                            <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 border-b-2 border-slate-100 pb-1">Lịch sử đánh giá</h5>
+                                                                            <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-1 hide-scrollbar">
+                                                                                {g.kpi.history.map((h, i) => (
+                                                                                    <div key={i} className="flex justify-between items-center bg-slate-50 border border-slate-200 p-2 rounded-lg">
+                                                                                        <span className="text-xs font-bold text-slate-700">{h.date}: <b className="text-blue-700">{h.value}</b> <span className="text-[10px] text-slate-500">{g.kpi.unit}</span></span>
+                                                                                        <button onClick={()=>deleteKpiHistory(g.id, h.date)} className="text-slate-400 hover:text-red-600 p-1 rounded-md transition-colors hover:bg-red-50 border border-transparent hover:border-red-200"><Trash2 size={14}/></button>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             ) : (
                                                                 <button onClick={()=>{setUpdatingGoalId(g.id);setKpiVal(g.kpi.current);setKpiDate(getTodayYMD());}} className="w-full lg:w-auto text-xs sm:text-sm font-bold bg-white border-2 border-blue-300 text-blue-800 px-4 py-2.5 rounded-xl shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-700 transition-colors flex justify-center items-center gap-1.5 mt-2 lg:mt-0"><SlidersHorizontal size={16}/> Đánh giá tiến độ</button>
@@ -812,7 +859,7 @@
                                                 )}
                                             </div>
                                         ))}
-                                        {selectedClient.details.goals.length===0 && !showAddGoal && <div className="text-center py-10 md:py-12 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 mx-2"><Target size={40} className="mx-auto text-slate-300 mb-3"/><p className="text-base md:text-lg font-bold text-slate-600 mb-1">Chưa có mục tiêu</p><p className="text-xs md:text-sm font-medium text-slate-500 px-4">Thêm mục tiêu để theo dõi biểu đồ tiến trình.</p></div>}
+                                        {selectedClient.details.goals.length===0 && !showAddGoal && <div className="text-center py-10 md:py-12 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 mx-2"><Target size={40} className="mx-auto text-slate-300 mb-3"/><p className="text-base md:text-lg font-bold text-slate-600 mb-1">Chưa có kế hoạch hỗ trợ</p><p className="text-xs md:text-sm font-medium text-slate-500 px-4">Thêm mục tiêu để theo dõi biểu đồ tiến trình.</p></div>}
                                         </div>
                                     </div>
                                 )}
@@ -883,21 +930,21 @@
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
                                             <h3 className="font-bold text-lg text-slate-800 border-b-2 border-slate-200 pb-2 w-full sm:w-auto">Lượng giá Tiến trình</h3>
                                             {selectedClient.status !== 'Đã đóng ca' ? (
-                                                <button onClick={handleCloseCase} className="w-full sm:w-auto bg-slate-800 border-2 border-slate-900 hover:bg-slate-900 transition-colors text-white shadow-sm font-bold px-5 py-2.5 rounded-lg flex justify-center items-center gap-2 text-sm shrink-0"><CheckCircle size={18}/> ĐÓNG CA</button>
+                                                <button onClick={handleCloseCase} className="w-full sm:w-auto bg-slate-800 border-2 border-slate-900 hover:bg-slate-900 transition-colors text-white shadow-lg font-bold px-6 py-3 rounded-xl flex items-center gap-2 text-sm shrink-0"><CheckCircle size={20}/> QUYẾT ĐỊNH ĐÓNG CA</button>
                                             ) : (
                                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                                                    <span className="bg-emerald-50 text-emerald-800 border-2 border-emerald-300 px-4 py-2 rounded-lg font-bold flex justify-center items-center gap-2 shadow-sm text-sm"><CheckCircle size={18}/> ĐÃ ĐÓNG CA</span>
-                                                    <button onClick={handleReopenCase} className="bg-blue-600 border-2 border-blue-700 hover:bg-blue-700 text-white shadow-sm font-bold px-4 py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"><RotateCcw size={18}/> Mở lại can thiệp</button>
+                                                    <span className="bg-emerald-50 text-emerald-800 border-2 border-emerald-300 px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 shadow-sm text-sm"><CheckCircle size={20}/> ĐÃ HOÀN TẤT ĐÓNG CA</span>
+                                                    <button onClick={handleReopenCase} className="bg-blue-600 border-2 border-blue-700 hover:bg-blue-700 text-white shadow-md font-bold px-6 py-3 rounded-xl flex justify-center items-center gap-2 transition-colors text-sm"><RotateCcw size={20}/> Mở lại can thiệp</button>
                                                 </div>
                                             )}
                                         </div>
                                         
                                         <div className="space-y-6 w-full">
                                             {selectedClient.details.goals.map(g => g.kpi.history.length>0 && (
-                                                <div key={g.id} className="bg-white border-2 border-slate-300 p-4 md:p-6 rounded-2xl shadow-sm w-full overflow-hidden">
-                                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5 border-b-2 border-slate-200 pb-3">
-                                                        <h4 className="font-bold text-sm md:text-base text-slate-800 flex items-center gap-2"><TrendingUp className="text-blue-600 shrink-0" size={18}/> <span className="truncate">Đo lường: <span className="text-blue-900">{g.text}</span></span></h4>
-                                                        <div className="bg-blue-50 border-2 border-blue-200 px-3 py-1 rounded-lg shadow-sm shrink-0"><span className="text-xs font-bold text-blue-800 uppercase tracking-wider">Tỷ lệ: {g.kpi.current}/{g.kpi.target} {g.kpi.unit}</span></div>
+                                                <div key={g.id} className="bg-white border-2 border-slate-300 p-4 md:p-8 rounded-3xl shadow-sm w-full overflow-hidden">
+                                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 border-b-2 border-slate-200 pb-4">
+                                                        <h4 className="font-black text-base md:text-xl text-slate-800 flex items-center gap-3"><TrendingUp className="text-blue-600 shrink-0" size={24}/> <span className="truncate">Đo lường: <span className="text-blue-900">{g.text}</span></span></h4>
+                                                        <div className="bg-blue-50 border-2 border-blue-200 px-5 py-2 rounded-xl shadow-sm shrink-0"><span className="text-sm font-black text-blue-800 uppercase tracking-wider">Tỷ lệ: {g.kpi.current}/{g.kpi.target} {g.kpi.unit}</span></div>
                                                     </div>
                                                     <div className="w-full overflow-x-auto pb-2"><MiniLineChart kpiData={g.kpi}/></div>
                                                 </div>
@@ -905,28 +952,28 @@
                                             {selectedClient.details.goals.filter(g=>g.kpi.history.length>0).length === 0 && <div className="text-center py-10 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 mx-2"><BarChart3 size={40} className="mx-auto text-slate-300 mb-3"/><p className="text-sm font-bold text-slate-500">Chưa có biểu đồ đo lường cho các mục tiêu.</p></div>}
                                         </div>
 
-                                        <div className="bg-white border-2 border-slate-300 p-5 md:p-6 rounded-2xl shadow-sm mt-8 w-full">
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 border-b-2 border-slate-200 pb-3">
-                                                <h4 className="font-bold text-base md:text-lg text-emerald-900 flex items-center gap-2"><FileSignature size={20} className="text-emerald-600 shrink-0"/> Báo cáo Lượng giá</h4>
+                                        <div className="bg-white border-2 border-slate-300 p-5 md:p-8 rounded-3xl shadow-sm mt-10 w-full">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b-2 border-slate-200 pb-4">
+                                                <h4 className="font-black text-xl md:text-2xl text-emerald-900 flex items-center gap-3"><FileSignature size={28} className="text-emerald-600 shrink-0"/> Báo cáo Lượng giá Tổng quát</h4>
                                                 {!isEditEval ? (
-                                                    <button onClick={()=>{setEvalNote(selectedClient.details.evaluationNotes);setIsEditEval(true);}} className="w-full sm:w-auto text-xs font-bold text-blue-800 bg-white border-2 border-blue-300 hover:bg-blue-600 hover:text-white transition-colors px-4 py-2 rounded-lg flex justify-center items-center gap-1.5 shadow-sm"><Edit3 size={14}/> Cập nhật báo cáo</button>
+                                                    <button onClick={()=>{setEvalNote(selectedClient.details.evaluationNotes);setIsEditEval(true);}} className="w-full sm:w-auto text-sm font-black text-blue-800 bg-white border-2 border-blue-300 hover:bg-blue-600 hover:text-white transition-colors px-6 py-3 rounded-xl flex justify-center items-center gap-2 shadow-sm"><Edit3 size={18}/> Cập nhật báo cáo</button>
                                                 ) : (
-                                                    <div className="flex gap-2 w-full sm:w-auto">
-                                                        <button onClick={()=>setIsEditEval(false)} className="flex-1 sm:flex-none text-xs font-bold bg-white border-2 border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-100 shadow-sm transition-colors">Hủy</button>
-                                                        <button onClick={()=>{updateClient({...selectedClient,details:{...selectedClient.details,evaluationNotes:evalNote}});setIsEditEval(false);}} className="flex-1 sm:flex-none text-xs font-bold bg-emerald-600 border-2 border-emerald-700 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow-sm flex justify-center items-center gap-1.5 transition-colors"><Save size={14}/> Lưu</button>
+                                                    <div className="flex gap-3 w-full sm:w-auto">
+                                                        <button onClick={()=>setIsEditEval(false)} className="flex-1 sm:flex-none text-sm font-black bg-white border-2 border-slate-300 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-100 shadow-sm transition-colors">Hủy</button>
+                                                        <button onClick={()=>{updateClient({...selectedClient,details:{...selectedClient.details,evaluationNotes:evalNote}});setIsEditEval(false);}} className="flex-1 sm:flex-none text-sm font-black bg-emerald-600 border-2 border-emerald-700 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl shadow-md flex justify-center items-center gap-2 transition-colors"><Save size={18}/> Lưu Báo Cáo</button>
                                                     </div>
                                                 )}
                                             </div>
                                             {!isEditEval ? (
-                                                <div className="bg-slate-50 p-4 md:p-6 rounded-xl border-2 border-slate-200 min-h-[120px] shadow-inner">
+                                                <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border-2 border-slate-200 min-h-[200px] shadow-inner">
                                                     {selectedClient.details.evaluationNotes ? (
-                                                        <p className="text-slate-800 font-medium whitespace-pre-wrap leading-relaxed text-sm break-words">{selectedClient.details.evaluationNotes}</p>
+                                                        <p className="text-slate-800 font-medium whitespace-pre-wrap leading-loose text-base md:text-lg break-words">{selectedClient.details.evaluationNotes}</p>
                                                     ) : (
-                                                        <div className="flex flex-col items-center justify-center h-full text-slate-400 py-6"><FileText size={40} className="mb-3 opacity-50"/><p className="font-bold text-sm italic text-center px-4">Chưa ghi nhận báo cáo tổng quát nào cho ca này.</p></div>
+                                                        <div className="flex flex-col items-center justify-center h-full text-slate-400 py-10"><FileText size={56} className="mb-4 opacity-50"/><p className="font-bold text-lg italic text-center px-4">Chưa ghi nhận báo cáo tổng quát nào cho ca này.</p></div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <textarea rows={8} className="w-full p-4 border-2 border-emerald-400 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/50 bg-emerald-50/50 text-slate-900 font-medium text-sm shadow-inner" value={evalNote} onChange={e=>setEvalNote(e.target.value)} placeholder="Nhập nhận xét về sự tiến bộ, điểm cần khắc phục của thân chủ sau quá trình hỗ trợ, cũng như các khuyến nghị tiếp theo..."></textarea>
+                                                <textarea rows={10} className="w-full p-6 border-2 border-emerald-400 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/20 bg-emerald-50/50 text-slate-900 font-medium text-base md:text-lg shadow-inner" value={evalNote} onChange={e=>setEvalNote(e.target.value)} placeholder="Nhập nhận xét về sự tiến bộ, điểm cần khắc phục của thân chủ sau quá trình hỗ trợ, cũng như các khuyến nghị tiếp theo..."></textarea>
                                             )}
                                         </div>
                                     </div>
