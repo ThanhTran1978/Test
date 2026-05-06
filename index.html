@@ -138,18 +138,87 @@
         const DocList = ({ docs, onRm }) => {
             if(!docs||docs.length===0) return <p className="text-sm font-medium italic text-slate-500">Chưa có tài liệu đính kèm.</p>;
             return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{docs.map((d,i) => (
-                <div key={i} className="flex justify-between items-center p-3 border-2 border-indigo-200 rounded-xl bg-white shadow-sm hover:border-indigo-400 transition-all">
+                <div key={i} className="flex justify-between items-center p-2.5 border-2 border-indigo-200 rounded-lg bg-white shadow-sm hover:border-indigo-400 transition-all">
                     <div className="flex items-center gap-2 overflow-hidden"><FileType className="text-indigo-500 shrink-0" size={18}/><span className="text-sm font-bold text-indigo-900 truncate">{d.name}</span></div>
-                    {onRm ? <button onClick={()=>onRm(i)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg shrink-0 transition-colors"><X size={16}/></button> : <a href={d.data} download={d.name} className="text-blue-700 bg-blue-100 hover:bg-blue-600 hover:text-white transition-colors px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap">Tải Về</a>}
+                    {onRm ? <button onClick={()=>onRm(i)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg shrink-0 transition-colors"><X size={16}/></button> : <a href={d.data} download={d.name} className="text-blue-700 bg-blue-100 hover:bg-blue-600 hover:text-white transition-colors px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap">Tải Về</a>}
                 </div>
             ))}</div>;
         };
+
+        // --- HỒ SƠ MẪU DEMO (NGUYỄN VĂN A) ---
+        const demoClients = [
+            {
+                id: "KH-001",
+                alias: "N.V.A",
+                fullName: "Nguyễn Văn A",
+                studentId: "225601001",
+                recordDate: "01/05/2026",
+                disabilityType: "Vận động",
+                disabilityOther: "",
+                disabilitySeverity: "Nặng",
+                interventionLevel: "Can thiệp Chuyên sâu",
+                category: "Sinh viên Khuyết tật",
+                age: "20",
+                ethnicity: "Kinh",
+                religion: "Không",
+                phone: "0901234567",
+                address: "Khu B KTX ĐHQG, P. Đông Hòa, Dĩ An",
+                avatar: "",
+                status: "Đang can thiệp",
+                documents: [],
+                details: {
+                    family: "Gia đình ở Phú Yên, thuộc diện hộ nghèo. Bố mất sớm, mẹ làm nông có thu nhập bấp bênh. Sinh viên tự lên TP.HCM học tập, di chuyển hoàn toàn bằng xe lăn.",
+                    needs: "Cần hỗ trợ học bổng để trang trải học phí và sinh hoạt. Mong muốn KTX sắp xếp phòng ở tầng trệt để tiện đi lại. Cần tư vấn tâm lý do có dấu hiệu tự ti, mặc cảm.",
+                    notes: "Sinh viên có ý chí vươn lên rất lớn, thành tích học tập học kỳ trước đạt loại Giỏi (3.2/4.0). Rất hợp tác khi làm việc với NVCTXH.",
+                    problems: [
+                        "Thiếu tài chính để chi trả học phí và sinh hoạt phí",
+                        "Bất tiện trong di chuyển nội khu KTX và giảng đường do rào cản vật lý",
+                        "Tâm lý tự ti, mặc cảm, thiếu kết nối xã hội"
+                    ],
+                    swot: {
+                        S: ["Ý chí học tập cao, thành tích tốt", "Thành thạo tin học văn phòng", "Có khả năng tự lập trong sinh hoạt cá nhân"],
+                        W: ["Sức khỏe yếu, di chuyển hạn chế", "Hay mặc cảm, ngại giao tiếp trước đám đông"],
+                        O: ["Trường có chính sách hỗ trợ SVKT", "Nhiều quỹ học bổng của doanh nghiệp đang mở"],
+                        T: ["Nguy cơ gián đoạn học tập do thiếu tài chính", "Cơ sở hạ tầng một số khu vực chưa hoàn toàn tiếp cận"]
+                    },
+                    goals: [
+                        {
+                            id: 101, text: "Đảm bảo nguồn tài chính duy trì học tập", activity: "- Nộp hồ sơ xin xét miễn giảm học phí tại P.CTSV\n- Làm hồ sơ xin học bổng Nụ Cười",
+                            linkedReferral: ["Phòng CTSV", "Quỹ Học bổng Nụ Cười"], status: "Đang tiến hành", deadline: "30/05/2026",
+                            kpi: { baseline: 0, current: 50, target: 100, unit: "%", history: [ { date: "01/05/2026", value: 0 }, { date: "04/05/2026", value: 50 } ] }
+                        },
+                        {
+                            id: 102, text: "Cải thiện tâm lý, tăng cường kết nối", activity: "- Tham gia các buổi tham vấn tâm lý cá nhân\n- Tham gia CLB Sinh viên Khuyết tật",
+                            linkedReferral: ["Phòng Tham vấn Tâm lý"], status: "Đang tiến hành", deadline: "15/06/2026",
+                            kpi: { baseline: 0, current: 2, target: 4, unit: "Buổi", history: [ { date: "01/05/2026", value: 0 }, { date: "03/05/2026", value: 1 }, { date: "06/05/2026", value: 2 } ] }
+                        }
+                    ],
+                    referrals: [
+                        { org: "Phòng CTSV", service: "Miễn giảm học phí", condition: "Đã nộp hồ sơ, chờ BGH duyệt", status: "Chờ phản hồi", date: "03/05/2026" },
+                        { org: "Phòng Tham vấn Tâm lý", service: "Tham vấn tâm lý cá nhân", condition: "Đã xếp lịch thứ 6 hàng tuần", status: "Đang xử lý", date: "02/05/2026" },
+                        { org: "Quỹ Học bổng Nụ Cười", service: "Hỗ trợ sinh hoạt phí 2tr/tháng", condition: "Đã phỏng vấn đạt", status: "Đã kết nối", date: "04/05/2026" }
+                    ],
+                    evaluationNotes: "Thân chủ Nguyễn Văn A rất hợp tác trong tiến trình can thiệp.\n- Về tài chính: Đã có kết quả tích cực từ Quỹ học bổng Nụ Cười.\n- Về tâm lý: Sau 2 buổi tham vấn, SV chia sẻ đã bớt căng thẳng và chủ động bắt chuyện với bạn cùng phòng.\n=> Tiếp tục duy trì kế hoạch và theo dõi tiến độ duyệt học phí của P.CTSV.",
+                    timeline: [
+                        { date: "06/05/2026", event: "Cập nhật KPI: Cải thiện tâm lý, tăng cường kết nối -> 2" },
+                        { date: "04/05/2026", event: "Quỹ Nụ Cười thông báo cấp học bổng." },
+                        { date: "01/05/2026", event: "Khởi tạo hồ sơ tiếp nhận." }
+                    ]
+                }
+            }
+        ];
 
         // MAIN APP
         function CaseManagementDemo() {
           const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
           const [activeTab, setActiveTab] = useState('dashboard');
-          const [clients, setClients] = useState(() => { const s = localStorage.getItem('ussh_hcm_clients_data'); return s ? JSON.parse(s) : []; });
+          const [clients, setClients] = useState(() => { 
+              const s = localStorage.getItem('ussh_hcm_clients_data'); 
+              if (s && s !== '[]') {
+                  try { return JSON.parse(s); } catch (e) { return demoClients; }
+              }
+              return demoClients; 
+          });
           useEffect(() => { localStorage.setItem('ussh_hcm_clients_data', JSON.stringify(clients)); }, [clients]);
 
           const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null });
@@ -427,7 +496,7 @@
                   <button onClick={()=>{setActiveTab('clients');setSelectedClient(null);setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl font-bold transition-all border-2 ${['clients','clientDetail'].includes(activeTab)?'bg-blue-600 border-blue-500 shadow-md text-white':'border-transparent hover:bg-slate-800 text-slate-300 hover:border-slate-700'}`}><Users size={18}/> Danh sách Hồ sơ</button>
                   <button onClick={()=>{setActiveTab('addClient');setSelectedClient(null);setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl font-bold transition-all border-2 ${activeTab==='addClient'?'bg-blue-600 border-blue-500 shadow-md text-white':'border-transparent hover:bg-slate-800 text-slate-300 hover:border-slate-700'}`}><FileSignature size={18}/> Tiếp nhận Mới</button>
                 </nav>
-                <div className="p-4 border-t-2 border-slate-800"><button onClick={()=>confirm('CẢNH BÁO', 'Xóa toàn bộ dữ liệu demo?', ()=> {localStorage.removeItem('ussh_hcm_clients_data'); window.location.reload();})} className="w-full flex justify-center items-center gap-2 py-2.5 bg-slate-800 hover:bg-red-900 border-2 border-slate-700 hover:border-red-800 text-slate-300 hover:text-red-300 rounded-lg text-xs font-bold transition-all shadow-sm"><Trash2 size={14}/> Reset Dữ Liệu</button></div>
+                <div className="p-4 border-t-2 border-slate-800"><button onClick={()=>confirm('KHÔI PHỤC DỮ LIỆU', 'Hệ thống sẽ tải lại hồ sơ mẫu (Nguyễn Văn A). Dữ liệu hiện tại sẽ bị xóa?', ()=> {localStorage.removeItem('ussh_hcm_clients_data'); window.location.reload();})} className="w-full flex justify-center items-center gap-2 py-2.5 bg-slate-800 hover:bg-blue-900 border-2 border-slate-700 hover:border-blue-800 text-slate-300 hover:text-blue-300 rounded-lg text-xs font-bold transition-all shadow-sm"><RotateCcw size={14}/> Reset Dữ Liệu Mẫu</button></div>
               </div>
 
               {/* MAIN CONTENT WRAPPER */}
